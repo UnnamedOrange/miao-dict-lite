@@ -17,7 +17,7 @@
 #undef min
 #undef max
 
-#include <utils/utf_conv.hpp>
+#include <utils/code_conv.hpp>
 
 /// <summary>
 /// window 基类。

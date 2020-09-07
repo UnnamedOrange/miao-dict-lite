@@ -13,6 +13,7 @@
 #include <condition_variable>
 #include <stdexcept>
 #include <typeinfo>
+#include <concepts>
 #include <Windows.h>
 #undef min
 #undef max
@@ -244,6 +245,42 @@ public:
 		std::wstring ret(GetWindowTextLengthW(hwnd), 0);
 		GetWindowTextW(hwnd, ret.data(), int(ret.size()));
 		return ret;
+	}
+
+public:
+	/// <summary>
+	/// 获取窗口根据显示器设置的 DPI 应缩放的比例。
+	/// </summary>
+	/// <returns>浮点数，代表比例。</returns>
+	double dpi() const
+	{
+		if (!hwnd)
+			throw std::runtime_error("hwnd is nullptr.");
+		return static_cast<double>(GetDpiForWindow(hwnd)) / USER_DEFAULT_SCREEN_DPI;
+	}
+	/// <summary>
+	/// 根据窗口的 DPI 计算缩放后的整数。
+	/// </summary>
+	/// <typeparam name="int_t">整数类型。</typeparam>
+	/// <param name="val">要缩放的值。</param>
+	/// <returns>缩放后的值，保持类型不变。</returns>
+	template <typename int_t>
+	std::decay_t<int_t> dpi(int_t val) const
+		requires std::is_integral_v<int_t>
+	{
+		return static_cast<int_t>(static_cast<double>(val) * dpi());
+	}
+	/// <summary>
+	/// 根据窗口的 DPI 计算缩放后的浮点数。
+	/// </summary>
+	/// <typeparam name="int_t">浮点数类型。</typeparam>
+	/// <param name="val">要缩放的值。</param>
+	/// <returns>缩放后的值，保持类型不变。</returns>
+	template <typename float_t>
+	std::decay_t<float_t> dpi(float_t val) const
+		requires std::is_floating_point_v<float_t>
+	{
+		return static_cast<float_t>(static_cast<double>(val) * dpi());
 	}
 
 public:

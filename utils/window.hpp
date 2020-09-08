@@ -268,6 +268,8 @@ public:
 	std::decay_t<int_t> dpi(int_t val) const
 		requires std::is_integral_v<int_t>
 	{
+		if (!hwnd)
+			throw std::runtime_error("hwnd is nullptr.");
 		return static_cast<int_t>(static_cast<double>(val) * dpi());
 	}
 	/// <summary>
@@ -280,7 +282,24 @@ public:
 	std::decay_t<float_t> dpi(float_t val) const
 		requires std::is_floating_point_v<float_t>
 	{
+		if (!hwnd)
+			throw std::runtime_error("hwnd is nullptr.");
 		return static_cast<float_t>(static_cast<double>(val) * dpi());
+	}
+
+public:
+	/// <summary>
+	/// 获取窗口所在显示器的工作区域（Work Area）。
+	/// </summary>
+	/// <returns>工作区域对应的矩形（RECT）。</returns>
+	RECT work_area() const
+	{
+		if (!hwnd)
+			throw std::runtime_error("hwnd is nullptr.");
+		MONITORINFO mi{ sizeof(mi) };
+		HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+		GetMonitorInfoW(hMonitor, &mi);
+		return mi.rcWork;
 	}
 
 public:

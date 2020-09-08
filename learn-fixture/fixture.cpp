@@ -26,9 +26,12 @@ class fixture_window : public window
 			WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP | WS_SYSMENU);
 		SetWindowLongW(hwnd, GWL_EXSTYLE, WS_EX_LAYERED);
 		SetLayeredWindowAttributes(hwnd, NULL, 127, LWA_ALPHA);
-		width(300);
-		height(200);
 
+		RECT wa = work_area();
+		right(wa.right - dpi(16));
+		left(wa.right - dpi(300));
+		bottom(wa.bottom - dpi(16));
+		top(wa.bottom - dpi(200));
 		return TRUE;
 	}
 	void OnDestroy(HWND hwnd)

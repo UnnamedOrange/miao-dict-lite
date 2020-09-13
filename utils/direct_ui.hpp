@@ -175,7 +175,6 @@ namespace direct_ui
 
 	public:
 		std::vector<std::shared_ptr<dep_widget_base>> widgets;
-		D2D1_RECT_F clip_region{};
 
 	public:
 		scene(ID2D1Factory* pFactory, ID2D1RenderTarget* pRenderTarget) :
@@ -200,11 +199,8 @@ namespace direct_ui
 		void on_paint()
 		{
 			pRenderTarget->BeginDraw();
-			pRenderTarget->PushAxisAlignedClip(clip_region, D2D1_ANTIALIAS_MODE_ALIASED);
-			pRenderTarget->SetTransform(D2D1::Matrix3x2F::Translation(clip_region.left, clip_region.top));
 			for (const auto& widget : widgets)
 				widget->on_paint();
-			pRenderTarget->PopAxisAlignedClip();
 			pRenderTarget->EndDraw();
 		}
 

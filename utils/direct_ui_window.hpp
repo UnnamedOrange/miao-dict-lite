@@ -22,7 +22,6 @@ namespace direct_ui
 			case WM_CREATE:
 			{
 				_builtin_scene = dui_scene_factory.build_hwnd_scene(hwnd);
-				builtin_scene->clip_region = D2D1::RectF(0, 0, cwidth(), cheight());
 				builtin_scene->resize(cwidth(), cheight());
 				break;
 			}
@@ -42,7 +41,6 @@ namespace direct_ui
 				HANDLE_WM_SIZE(hwnd, wParam, lParam,
 					[this](HWND hwnd, UINT state, int cx, int cy)
 					{
-						builtin_scene->clip_region = D2D1::RectF(0, 0, cx, cy);
 						builtin_scene->resize(cx, cy);
 					});
 				break;

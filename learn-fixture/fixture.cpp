@@ -3,11 +3,15 @@
 #undef max
 #include <windowsx.h>
 #include "utils/window.hpp"
+#include "utils/direct_ui.hpp"
+#include "utils/direct_ui_window.hpp"
 
-class fixture_window : public window
+using namespace direct_ui;
+
+class fixture_window final : public dui_window
 {
 	static constexpr int cx = 500;
-	virtual INT_PTR WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) override
+	virtual INT_PTR DuiWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) override
 	{
 		switch (message)
 		{
@@ -24,8 +28,10 @@ class fixture_window : public window
 		caption(L"fixture");
 		SetWindowLongW(hwnd, GWL_STYLE,
 			WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP | WS_SYSMENU);
-		SetWindowLongW(hwnd, GWL_EXSTYLE, WS_EX_LAYERED);
-		SetLayeredWindowAttributes(hwnd, NULL, 127, LWA_ALPHA);
+		SetForegroundWindow(hwnd);
+		SetWindowPos(hwnd, HWND_TOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE | SWP_NOREDRAW);
+		SetWindowLongW(hwnd, GWL_EXSTYLE, WS_EX_LAYERED | WS_EX_TOPMOST);
+		SetLayeredWindowAttributes(hwnd, NULL, 254, LWA_ALPHA);
 
 		RECT wa = work_area();
 		right(wa.right - dpi(16));
@@ -38,6 +44,9 @@ class fixture_window : public window
 	{
 		PostQuitMessage(0);
 	}
+
+private:
+	std::shared_ptr<button> b1;
 
 public:
 	fixture_window()

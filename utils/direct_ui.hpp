@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include <vector>
 #include <memory>
 #include <type_traits>
 #include <functional>
@@ -15,6 +16,27 @@
 #include <d2d1_1.h>
 #pragma comment(lib, "d2d1.lib")
 #endif
+
+template <typename T>
+class reversed : public std::bidirectional_iterator_tag
+{
+private:
+	T& iterable;
+public:
+	reversed(T& iterable) : iterable(iterable) {}
+	reversed(const reversed&) = delete;
+	reversed(reversed&&) = delete;
+	reversed<T>& operator=(const reversed&) = delete;
+	reversed<T>& operator=(reversed&&) = delete;
+	auto begin() const { return iterable.rbegin(); }
+	auto end() const { return iterable.rend(); }
+	auto cbegin() const { return iterable.crbegin(); }
+	auto cend() const { return iterable.crend(); }
+	auto rbegin() const { return iterable.begin(); }
+	auto rend() const { return iterable.end(); }
+	auto crbegin() const { return iterable.cbegin(); }
+	auto crend() const { return iterable.cend(); }
+};
 
 namespace direct_ui
 {

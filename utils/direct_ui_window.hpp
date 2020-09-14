@@ -15,6 +15,9 @@ namespace direct_ui
 		const std::shared_ptr<scene>& s{ _builtin_scene };
 
 	private:
+		int capture_count{};
+
+	private:
 		virtual INT_PTR WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) override final
 		{
 			switch (message)
@@ -62,6 +65,28 @@ namespace direct_ui
 			case WM_MOUSELEAVE:
 			{
 				builtin_scene->on_mouse_leave();
+				break;
+			}
+			case WM_LBUTTONDOWN:
+			{
+				HANDLE_WM_LBUTTONDOWN(hwnd, wParam, lParam,
+					[this](HWND hwnd, BOOL fDoubleClick, int x, int y, UINT keyFlags)
+					{
+						if (capture_count++)
+							SetCapture(hwnd);
+						builtin_scene->on_left_down(x, y);
+					});
+				break;
+			}
+			case WM_LBUTTONUP:
+			{
+				HANDLE_WM_LBUTTONUP(hwnd, wParam, lParam,
+					[this](HWND hwnd, int x, int y, UINT keyFlags)
+					{
+						builtin_scene->on_left_up(x, y);
+						if (--capture_count)
+							ReleaseCapture();
+					});
 				break;
 			}
 			}

@@ -124,7 +124,7 @@ namespace direct_ui
 		bool is_mouse_hover{};
 		bool is_mouse_down{};
 	public:
-		std::function<void()> callback;
+		std::function<void()> callback{ [] {} };
 	public:
 		virtual void on_mouse_hover() override
 		{
@@ -270,6 +270,7 @@ namespace direct_ui
 
 	private:
 		std::shared_ptr<dep_widget_base> mouse_on;
+		std::pair<std::shared_ptr<dep_widget_base>, int> mouse_capture{};
 
 	public:
 		void on_paint()
@@ -282,6 +283,9 @@ namespace direct_ui
 		void on_mouse_move(int x, int y)
 		{
 			auto on_which = on_hittest(x, y);
+			if (mouse_capture.second)
+				if (mouse_capture.first = on_which)
+					on_which.reset();
 			if (on_which)
 			{
 				if (on_which != mouse_on)
@@ -309,7 +313,26 @@ namespace direct_ui
 		{
 			mouse_on.reset();
 		}
-
+		void on_left_down(int x, int y)
+		{
+			auto on_which = on_hittest(x, y);
+			if (mouse_capture.second)
+				on_which = mouse_capture.first;
+			if (on_which)
+			{
+				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				logic->on_left_down(x - logic->x, y - logic->y);
+				mouse_capture.first = on_which;
+				mouse_capture.second++;
+			}
+		}
+		void on_left_up(int x, int y)
+		{
+			auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_capture.first);
+			logic->on_left_up(x - logic->x, y - logic->y);
+			if (--mouse_capture.second)
+				mouse_capture.first.reset();
+		}
 	public:
 		template <typename dep_widget_t>
 		std::shared_ptr<dep_widget_t> build_dep_widget()

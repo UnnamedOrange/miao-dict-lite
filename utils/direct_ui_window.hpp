@@ -50,8 +50,18 @@ namespace direct_ui
 				HANDLE_WM_MOUSEMOVE(hwnd, wParam, lParam,
 					[this](HWND hwnd, int x, int y, UINT keyFlags)
 					{
+						TRACKMOUSEEVENT tme{ sizeof(tme) };
+						tme.hwndTrack = hwnd;
+						tme.dwFlags = TME_LEAVE;
+						tme.dwHoverTime = 0;
+						TrackMouseEvent(&tme);
 						builtin_scene->on_mouse_move(x, y);
 					});
+				break;
+			}
+			case WM_MOUSELEAVE:
+			{
+				builtin_scene->on_mouse_leave();
 				break;
 			}
 			}

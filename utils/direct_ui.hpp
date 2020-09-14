@@ -268,6 +268,9 @@ namespace direct_ui
 			return ret;
 		}
 
+	private:
+		std::shared_ptr<dep_widget_base> mouse_on;
+
 	public:
 		void on_paint()
 		{
@@ -281,9 +284,30 @@ namespace direct_ui
 			auto on_which = on_hittest(x, y);
 			if (on_which)
 			{
+				if (on_which != mouse_on)
+				{
+					if (mouse_on)
+					{
+						auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_on);
+						logic->on_mouse_leave();
+					}
+					mouse_on = on_which;
+					auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_on);
+					logic->on_mouse_hover();
+				}
 				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
 				logic->on_mouse_move(x - logic->x, y - logic->y);
 			}
+			else if (mouse_on)
+			{
+				auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_on);
+				logic->on_mouse_leave();
+				mouse_on.reset();
+			}
+		}
+		void on_mouse_leave()
+		{
+			mouse_on.reset();
 		}
 
 	public:

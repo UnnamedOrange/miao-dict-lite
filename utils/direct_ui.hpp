@@ -124,26 +124,33 @@ namespace direct_ui
 		}
 	};
 
-#if _MSVC_LANG
 	template <typename logic_t>
-	class dep_widget
+	class dep_widget_interface
 	{
-	protected:
-		ID2D1Factory* pFactory{};
-		ID2D1RenderTarget* pRenderTarget{};
-
 	private:
 		virtual void init_resources() {}
 	public:
-		virtual ~dep_widget() {}
+		virtual ~dep_widget_interface() {}
 
 	public:
 		virtual void on_paint() const = 0;
 
 		friend class scene;
 	};
+
+	template <typename logic_t>
+	class dep_widget : public dep_widget_interface<logic_t>
+	{
+	protected:
+#if _MSVC_LANG
+		ID2D1Factory* pFactory{};
+		ID2D1RenderTarget* pRenderTarget{};
+#endif
+		friend class scene;
+	};
 	using dep_widget_base = dep_widget<logic_widget>;
 
+#if _MSVC_LANG
 	template <>
 	class dep_widget<logic_button> : public logic_button, public dep_widget_base
 	{
@@ -280,4 +287,10 @@ namespace direct_ui
 		}
 	};
 #endif
+
+	template <typename logic_t>
+	concept has_implimented_dep_widget = std::is_base_of_v<logic_t, dep_widget<logic_t>> &&
+		std::is_base_of_v<dep_widget_base, dep_widget<logic_t>>;
+	static_assert(has_implimented_dep_widget<logic_rect>);
+	static_assert(has_implimented_dep_widget<logic_button>);
 }

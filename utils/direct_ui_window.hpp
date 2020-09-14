@@ -45,6 +45,15 @@ namespace direct_ui
 					});
 				break;
 			}
+			case WM_MOUSEMOVE:
+			{
+				HANDLE_WM_MOUSEMOVE(hwnd, wParam, lParam,
+					[this](HWND hwnd, int x, int y, UINT keyFlags)
+					{
+						builtin_scene->on_mouse_move(x, y);
+					});
+				break;
+			}
 			}
 			return DuiWindowProc(hwnd, message, wParam, lParam);
 		}

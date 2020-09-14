@@ -250,6 +250,23 @@ namespace direct_ui
 		{
 			reinterpret_cast<ID2D1HwndRenderTarget*>(pRenderTarget)->Resize(D2D1::SizeU(width, height));
 		}
+	public:
+		auto on_hittest(int x, int y) const
+		{
+			std::shared_ptr<dep_widget_base> ret;
+			for (const auto& widget : reversed(widgets))
+			{
+				auto logic = std::dynamic_pointer_cast<logic_widget>(widget);
+				if (logic->x <= x && x < logic->x + logic->cx &&
+					logic->y <= y && y < logic->y + logic->cy &&
+					logic->on_hittest(x - logic->x, y - logic->y))
+				{
+					ret = widget;
+					break;
+				}
+			}
+			return ret;
+		}
 
 	public:
 		void on_paint()
@@ -258,6 +275,15 @@ namespace direct_ui
 			for (const auto& widget : widgets)
 				widget->on_paint();
 			pRenderTarget->EndDraw();
+		}
+		void on_mouse_move(int x, int y)
+		{
+			auto on_which = on_hittest(x, y);
+			if (on_which)
+			{
+				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				logic->on_mouse_move(x - logic->x, y - logic->y);
+			}
 		}
 
 	public:

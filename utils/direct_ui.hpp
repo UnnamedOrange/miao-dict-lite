@@ -5,6 +5,7 @@
 #include <functional>
 #include <optional>
 #include <concepts>
+#include <ranges>
 
 #if _MSVC_LANG
 #include <Windows.h>
@@ -23,7 +24,7 @@ namespace direct_ui
 	{
 	public:
 		virtual ~logic_widget() {}
-	protected:
+	private:
 		real _x{};
 		real _y{};
 		real _cx{};
@@ -49,6 +50,30 @@ namespace direct_ui
 			if (cy)
 				_cy = *cy;
 		}
+	private:
+		bool _is_focused{};
+		bool _is_activated{};
+	public:
+		const bool& is_foucsed{ _is_focused };
+		const bool& is_activated{ _is_activated };
+	public:
+		void set_focus()
+		{
+			_is_focused = true;
+		}
+		void kill_focus()
+		{
+			_is_focused = false;
+		}
+		void activate()
+		{
+			_is_activated = true;
+		}
+		void deactivate()
+		{
+			_is_activated = false;
+		}
+
 	public:
 		virtual void on_resize(real cx, real cy) {}
 		virtual void on_left_down(real x, real y) {}
@@ -60,6 +85,8 @@ namespace direct_ui
 		virtual void on_mouse_move(real x, real y) {}
 		virtual void on_mouse_hover() {}
 		virtual void on_mouse_leave() {}
+		virtual void on_key_down(int vk) {}
+		virtual void on_key_up(int vk) {}
 		virtual bool on_hittest(real x, real y) { return true; }
 	};
 	class logic_rect : public logic_widget

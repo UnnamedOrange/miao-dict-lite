@@ -122,7 +122,7 @@ namespace direct_ui
 	{
 	protected:
 		bool is_mouse_hover{};
-		bool is_mouse_down{};
+		int is_mouse_down{};
 	public:
 		std::function<void()> callback{ [] {} };
 	public:
@@ -136,11 +136,11 @@ namespace direct_ui
 		}
 		virtual void on_left_down(real x, real y) override
 		{
-			is_mouse_down = true;
+			is_mouse_down++;
 		}
 		virtual void on_left_up(real x, real y) override
 		{
-			is_mouse_down = false;
+			is_mouse_down--;
 			if (is_mouse_hover)
 				callback();
 		}
@@ -284,7 +284,7 @@ namespace direct_ui
 		{
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
-				if (mouse_capture.first = on_which)
+				if (mouse_capture.first != on_which)
 					on_which.reset();
 			if (on_which)
 			{
@@ -330,7 +330,7 @@ namespace direct_ui
 		{
 			auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_capture.first);
 			logic->on_left_up(x - logic->x, y - logic->y);
-			if (--mouse_capture.second)
+			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
 		}
 	public:

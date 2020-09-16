@@ -276,6 +276,7 @@ namespace direct_ui
 	private:
 		std::shared_ptr<dep_widget_base> mouse_on;
 		std::pair<std::shared_ptr<dep_widget_base>, int> mouse_capture{};
+		std::shared_ptr<dep_widget_base> focused;
 
 	public:
 		void on_paint()
@@ -325,7 +326,14 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
+				if (focused)
+				{
+					auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+					logic->kill_focus();
+					focused.reset();
+				}
 				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				logic->set_focus();
 				logic->on_left_down(x - logic->x, y - logic->y);
 				mouse_capture.first = on_which;
 				mouse_capture.second++;
@@ -345,7 +353,14 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
+				if (focused)
+				{
+					auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+					logic->kill_focus();
+					focused.reset();
+				}
 				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				logic->set_focus();
 				logic->on_mid_down(x - logic->x, y - logic->y);
 				mouse_capture.first = on_which;
 				mouse_capture.second++;
@@ -365,7 +380,14 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
+				if (focused)
+				{
+					auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+					logic->kill_focus();
+					focused.reset();
+				}
 				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				logic->set_focus();
 				logic->on_right_down(x - logic->x, y - logic->y);
 				mouse_capture.first = on_which;
 				mouse_capture.second++;

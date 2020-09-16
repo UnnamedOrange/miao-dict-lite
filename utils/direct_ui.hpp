@@ -118,44 +118,6 @@ namespace direct_ui
 		virtual void on_key_up(int vk) {}
 		virtual bool on_hittest(real x, real y) { return true; }
 	};
-	class logic_rect : public logic_widget
-	{
-	public:
-		unsigned int brush_color{};
-		unsigned int pen_color{};
-		real pen_size{};
-		logic_rect()
-		{
-			is_focusable = false;
-		}
-	};
-	class logic_button : public logic_widget
-	{
-	protected:
-		bool is_mouse_hover{};
-		int is_mouse_down{};
-	public:
-		std::function<void()> callback{ [] {} };
-	public:
-		virtual void on_mouse_hover() override
-		{
-			is_mouse_hover = true;
-		}
-		virtual void on_mouse_leave() override
-		{
-			is_mouse_hover = false;
-		}
-		virtual void on_left_down(real x, real y) override
-		{
-			is_mouse_down++;
-		}
-		virtual void on_left_up(real x, real y) override
-		{
-			is_mouse_down--;
-			if (is_mouse_hover)
-				callback();
-		}
-	};
 
 	template <typename logic_t>
 	class dep_widget_interface
@@ -188,57 +150,6 @@ namespace direct_ui
 	using dep_widget_base = dep_widget<logic_widget>;
 
 #if _MSVC_LANG
-	template <>
-	class dep_widget<logic_button> : public logic_button, public dep_widget_base
-	{
-		ID2D1SolidColorBrush* brush{};
-
-	public:
-		virtual void on_paint() const override
-		{
-			pRenderTarget->FillRectangle(D2D1::RectF(x, y, x + cx, y + cy), brush);
-		}
-
-	private:
-		virtual void init_resources() override
-		{
-			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::AliceBlue), &brush);
-		}
-	public:
-		~dep_widget()
-		{
-			if (brush)
-				brush->Release();
-		}
-
-		friend class scene;
-	};
-	using button = dep_widget<logic_button>;
-
-	template <>
-	class dep_widget<logic_rect> : public logic_rect, public dep_widget_base
-	{
-	public:
-		virtual void on_paint() const override
-		{
-			auto rect = D2D1::Rect(x, y, x + cx, y + cy);
-			{
-				ID2D1SolidColorBrush* brush;
-				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(brush_color, (brush_color >> 24) / 255.f), &brush);
-				pRenderTarget->FillRectangle(rect, brush);
-				brush->Release();
-			}
-			if (pen_size)
-			{
-				ID2D1SolidColorBrush* brush;
-				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(pen_color, (pen_color >> 24) / 255.f), &brush);
-				pRenderTarget->DrawRectangle(rect, brush, pen_size);
-				brush->Release();
-			}
-		}
-	};
-	using rect = dep_widget<logic_rect>;
-
 	class scene
 	{
 		ID2D1Factory* pFactory;
@@ -468,6 +379,98 @@ namespace direct_ui
 			return ret;
 		}
 	};
+#endif
+
+	class logic_rect : public logic_widget
+	{
+	public:
+		unsigned int brush_color{};
+		unsigned int pen_color{};
+		real pen_size{};
+		logic_rect()
+		{
+			is_focusable = false;
+		}
+	};
+	class logic_button : public logic_widget
+	{
+	protected:
+		bool is_mouse_hover{};
+		int is_mouse_down{};
+	public:
+		std::function<void()> callback{ [] {} };
+	public:
+		virtual void on_mouse_hover() override
+		{
+			is_mouse_hover = true;
+		}
+		virtual void on_mouse_leave() override
+		{
+			is_mouse_hover = false;
+		}
+		virtual void on_left_down(real x, real y) override
+		{
+			is_mouse_down++;
+		}
+		virtual void on_left_up(real x, real y) override
+		{
+			is_mouse_down--;
+			if (is_mouse_hover)
+				callback();
+		}
+	};
+
+#if _MSVC_LANG
+	template <>
+	class dep_widget<logic_button> : public logic_button, public dep_widget_base
+	{
+		ID2D1SolidColorBrush* brush{};
+
+	public:
+		virtual void on_paint() const override
+		{
+			pRenderTarget->FillRectangle(D2D1::RectF(x, y, x + cx, y + cy), brush);
+		}
+
+	private:
+		virtual void init_resources() override
+		{
+			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::AliceBlue), &brush);
+		}
+	public:
+		~dep_widget()
+		{
+			if (brush)
+				brush->Release();
+		}
+
+		friend class scene;
+	};
+	using button = dep_widget<logic_button>;
+
+	template <>
+	class dep_widget<logic_rect> : public logic_rect, public dep_widget_base
+	{
+	public:
+		virtual void on_paint() const override
+		{
+			auto rect = D2D1::Rect(x, y, x + cx, y + cy);
+			{
+				ID2D1SolidColorBrush* brush;
+				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(brush_color, (brush_color >> 24) / 255.f), &brush);
+				pRenderTarget->FillRectangle(rect, brush);
+				brush->Release();
+			}
+			if (pen_size)
+			{
+				ID2D1SolidColorBrush* brush;
+				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(pen_color, (pen_color >> 24) / 255.f), &brush);
+				pRenderTarget->DrawRectangle(rect, brush, pen_size);
+				brush->Release();
+			}
+		}
+	};
+	using rect = dep_widget<logic_rect>;
 #endif
 
 	template <typename logic_t>

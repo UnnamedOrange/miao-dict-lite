@@ -2,8 +2,10 @@
 
 #include <vector>
 #include <memory>
+#include <unordered_set>
 #include <type_traits>
 #include <functional>
+#include <chrono>
 #include <optional>
 #include <concepts>
 #include <ranges>
@@ -37,6 +39,43 @@ public:
 	auto crbegin() const { return iterable.cbegin(); }
 	auto crend() const { return iterable.cend(); }
 };
+
+#if _MSVC_LANG
+class timer
+{
+	inline static std::unordered_set<UINT_PTR> exists;
+	static void CALLBACK TimerProc(HWND hwnd, UINT message, UINT_PTR id, DWORD elapse)
+	{
+		if (!exists.count(id))
+			return;
+		reinterpret_cast<timer*>(id)->callback();
+	}
+public:
+	timer(std::function<void()> callback = [] {}) : callback(callback)
+	{
+		exists.insert(reinterpret_cast<UINT_PTR>(this));
+	}
+	~timer()
+	{
+		kill();
+		exists.erase(reinterpret_cast<UINT_PTR>(this));
+	}
+	timer(const timer&) = delete;
+	timer(timer&&) = delete;
+	timer& operator=(const timer&) = delete;
+	timer& operator=(timer&&) = delete;
+public:
+	std::function<void()> callback;
+	void set(DWORD elapse) const
+	{
+		SetTimer(nullptr, reinterpret_cast<UINT_PTR>(this), elapse, &timer::TimerProc);
+	}
+	void kill() const
+	{
+		KillTimer(nullptr, reinterpret_cast<UINT_PTR>(this));
+	}
+};
+#endif
 
 namespace direct_ui
 {
@@ -116,7 +155,15 @@ namespace direct_ui
 		virtual void on_mouse_leave() {}
 		virtual void on_key_down(int vk) {}
 		virtual void on_key_up(int vk) {}
+		virtual void on_update(std::chrono::high_resolution_clock::duration interval) {}
 		virtual bool on_hittest(real x, real y) { return true; }
+
+		friend class scene;
+	private:
+		std::weak_ptr<scene> _ancestor;
+	public:
+		const std::weak_ptr<scene>& ancestor{ _ancestor };
+		void require_update();
 	};
 	template <typename logic_t>
 	class dep_widget_interface
@@ -130,10 +177,6 @@ namespace direct_ui
 		virtual void on_paint() const = 0;
 
 		friend class scene;
-	private:
-		std::weak_ptr<scene> _ancestor;
-	public:
-		const std::weak_ptr<scene>& ancestor{ _ancestor };
 	};
 	template <typename logic_t>
 	class dep_widget : public dep_widget_interface<logic_t>
@@ -176,7 +219,26 @@ namespace direct_ui
 				pRenderTarget->Release();
 		}
 
+	private:
+		timer update_timer{ [this]()
+		{
+			if (update_flag)
+				on_update();
+			update_flag = false;
+			update_timer.kill();
+		} };
+		bool update_flag{};
+		std::chrono::high_resolution_clock::time_point pre{};
 	public:
+		void update()
+		{
+			if (!update_flag)
+			{
+				pre = std::chrono::high_resolution_clock::now();
+				update_flag = true;
+			}
+			update_timer.set(0);
+		}
 		void resize(int width, int height)
 		{
 			reinterpret_cast<ID2D1HwndRenderTarget*>(pRenderTarget)->Resize(D2D1::SizeU(width, height));
@@ -342,6 +404,13 @@ namespace direct_ui
 			for (const auto& widget : widgets)
 				to_logic(widget)->deactivate();
 		}
+		void on_update()
+		{
+			auto now = std::chrono::high_resolution_clock::now();
+			auto period = now - pre;
+			for (const auto& widget : widgets)
+				to_logic(widget)->on_update(period);
+		}
 	public:
 		template <typename dep_widget_t>
 		std::shared_ptr<dep_widget_t> build_dep_widget()
@@ -394,6 +463,10 @@ namespace direct_ui
 		}
 	};
 #endif
+	inline void direct_ui::logic_widget::require_update()
+	{
+		ancestor.lock()->update();
+	}
 
 	class logic_rect : public logic_widget
 	{

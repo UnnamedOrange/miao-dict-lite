@@ -118,7 +118,6 @@ namespace direct_ui
 		virtual void on_key_up(int vk) {}
 		virtual bool on_hittest(real x, real y) { return true; }
 	};
-
 	template <typename logic_t>
 	class dep_widget_interface
 	{
@@ -136,7 +135,6 @@ namespace direct_ui
 	public:
 		const std::weak_ptr<scene>& ancestor{ _ancestor };
 	};
-
 	template <typename logic_t>
 	class dep_widget : public dep_widget_interface<logic_t>
 	{
@@ -148,6 +146,12 @@ namespace direct_ui
 		friend class scene;
 	};
 	using dep_widget_base = dep_widget<logic_widget>;
+	template <typename dep_t>
+	inline std::shared_ptr<logic_widget> to_logic(std::shared_ptr<dep_t> dep)
+		requires std::is_base_of_v<dep_widget_base, dep_t> || std::is_same_v<dep_widget_base, dep_t>
+	{
+		return std::dynamic_pointer_cast<logic_widget>(dep);
+	}
 
 #if _MSVC_LANG
 	class scene
@@ -183,7 +187,7 @@ namespace direct_ui
 			std::shared_ptr<dep_widget_base> ret;
 			for (const auto& widget : reversed(widgets))
 			{
-				auto logic = std::dynamic_pointer_cast<logic_widget>(widget);
+				auto logic = to_logic(widget);
 				if (logic->x <= x && x < logic->x + logic->cx &&
 					logic->y <= y && y < logic->y + logic->cy &&
 					logic->on_hittest(x - logic->x, y - logic->y))
@@ -220,19 +224,19 @@ namespace direct_ui
 				{
 					if (mouse_on)
 					{
-						auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_on);
+						auto logic = to_logic(mouse_on);
 						logic->on_mouse_leave();
 					}
 					mouse_on = on_which;
-					auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_on);
+					auto logic = to_logic(mouse_on);
 					logic->on_mouse_hover();
 				}
-				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				auto logic = to_logic(on_which);
 				logic->on_mouse_move(x - logic->x, y - logic->y);
 			}
 			else if (mouse_on)
 			{
-				auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_on);
+				auto logic = to_logic(mouse_on);
 				logic->on_mouse_leave();
 				mouse_on.reset();
 			}
@@ -248,11 +252,11 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
-				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				auto logic = to_logic(on_which);
 				bool is_focus = logic->set_focus();
 				if (is_focus && focused && focused != on_which)
 				{
-					auto logic = std::dynamic_pointer_cast<logic_widget>(focused);
+					auto logic = to_logic(focused);
 					logic->kill_focus();
 					focused.reset();
 				}
@@ -265,7 +269,7 @@ namespace direct_ui
 		}
 		void on_left_up(int x, int y)
 		{
-			auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_capture.first);
+			auto logic = to_logic(mouse_capture.first);
 			logic->on_left_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
@@ -277,11 +281,11 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
-				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				auto logic = to_logic(on_which);
 				bool is_focus = logic->set_focus();
 				if (is_focus && focused && focused != on_which)
 				{
-					auto logic = std::dynamic_pointer_cast<logic_widget>(focused);
+					auto logic = to_logic(focused);
 					logic->kill_focus();
 					focused.reset();
 				}
@@ -294,7 +298,7 @@ namespace direct_ui
 		}
 		void on_mid_up(int x, int y)
 		{
-			auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_capture.first);
+			auto logic = to_logic(mouse_capture.first);
 			logic->on_mid_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
@@ -306,11 +310,11 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
-				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				auto logic = to_logic(on_which);
 				bool is_focus = logic->set_focus();
 				if (is_focus && focused && focused != on_which)
 				{
-					auto logic = std::dynamic_pointer_cast<logic_widget>(focused);
+					auto logic = to_logic(focused);
 					logic->kill_focus();
 					focused.reset();
 				}
@@ -323,7 +327,7 @@ namespace direct_ui
 		}
 		void on_right_up(int x, int y)
 		{
-			auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_capture.first);
+			auto logic = to_logic(mouse_capture.first);
 			logic->on_right_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();

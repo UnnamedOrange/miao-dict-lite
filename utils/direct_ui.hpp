@@ -333,6 +333,46 @@ namespace direct_ui
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
 		}
+		void on_mid_down(int x, int y)
+		{
+			auto on_which = on_hittest(x, y);
+			if (mouse_capture.second)
+				on_which = mouse_capture.first;
+			if (on_which)
+			{
+				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				logic->on_mid_down(x - logic->x, y - logic->y);
+				mouse_capture.first = on_which;
+				mouse_capture.second++;
+			}
+		}
+		void on_mid_up(int x, int y)
+		{
+			auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_capture.first);
+			logic->on_mid_up(x - logic->x, y - logic->y);
+			if (!(--mouse_capture.second))
+				mouse_capture.first.reset();
+		}
+		void on_right_down(int x, int y)
+		{
+			auto on_which = on_hittest(x, y);
+			if (mouse_capture.second)
+				on_which = mouse_capture.first;
+			if (on_which)
+			{
+				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				logic->on_right_down(x - logic->x, y - logic->y);
+				mouse_capture.first = on_which;
+				mouse_capture.second++;
+			}
+		}
+		void on_right_up(int x, int y)
+		{
+			auto logic = std::dynamic_pointer_cast<logic_widget>(mouse_capture.first);
+			logic->on_right_up(x - logic->x, y - logic->y);
+			if (!(--mouse_capture.second))
+				mouse_capture.first.reset();
+		}
 	public:
 		template <typename dep_widget_t>
 		std::shared_ptr<dep_widget_t> build_dep_widget()

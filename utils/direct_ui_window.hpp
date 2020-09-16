@@ -89,6 +89,50 @@ namespace direct_ui
 					});
 				break;
 			}
+			case WM_MBUTTONDOWN:
+			{
+				HANDLE_WM_LBUTTONDOWN(hwnd, wParam, lParam,
+					[this](HWND hwnd, BOOL fDoubleClick, int x, int y, UINT keyFlags)
+					{
+						if (capture_count++)
+							SetCapture(hwnd);
+						builtin_scene->on_mid_down(x, y);
+					});
+				break;
+			}
+			case WM_MBUTTONUP:
+			{
+				HANDLE_WM_LBUTTONUP(hwnd, wParam, lParam,
+					[this](HWND hwnd, int x, int y, UINT keyFlags)
+					{
+						builtin_scene->on_mid_up(x, y);
+						if (--capture_count)
+							ReleaseCapture();
+					});
+				break;
+			}
+			case WM_RBUTTONDOWN:
+			{
+				HANDLE_WM_LBUTTONDOWN(hwnd, wParam, lParam,
+					[this](HWND hwnd, BOOL fDoubleClick, int x, int y, UINT keyFlags)
+					{
+						if (capture_count++)
+							SetCapture(hwnd);
+						builtin_scene->on_right_down(x, y);
+					});
+				break;
+			}
+			case WM_RBUTTONUP:
+			{
+				HANDLE_WM_LBUTTONUP(hwnd, wParam, lParam,
+					[this](HWND hwnd, int x, int y, UINT keyFlags)
+					{
+						builtin_scene->on_right_up(x, y);
+						if (--capture_count)
+							ReleaseCapture();
+					});
+				break;
+			}
 			}
 			return DuiWindowProc(hwnd, message, wParam, lParam);
 		}

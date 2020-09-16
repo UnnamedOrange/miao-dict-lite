@@ -76,12 +76,19 @@ namespace direct_ui
 		bool _is_focused{};
 		bool _is_activated{};
 	public:
+		bool is_focusable{ true };
+	public:
 		const bool& is_foucsed{ _is_focused };
 		const bool& is_activated{ _is_activated };
 	public:
-		void set_focus()
+		bool set_focus()
 		{
-			_is_focused = true;
+			if (is_focusable)
+			{
+				_is_focused = true;
+				return true;
+			}
+			return false;
 		}
 		void kill_focus()
 		{
@@ -117,6 +124,10 @@ namespace direct_ui
 		unsigned int brush_color{};
 		unsigned int pen_color{};
 		real pen_size{};
+		logic_rect()
+		{
+			is_focusable = false;
+		}
 	};
 	class logic_button : public logic_widget
 	{
@@ -326,14 +337,16 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
-				if (focused)
+				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				bool is_focus = logic->set_focus();
+				if (is_focus && focused && focused != on_which)
 				{
-					auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+					auto logic = std::dynamic_pointer_cast<logic_widget>(focused);
 					logic->kill_focus();
 					focused.reset();
 				}
-				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
-				logic->set_focus();
+				if (is_focus)
+					focused = on_which;
 				logic->on_left_down(x - logic->x, y - logic->y);
 				mouse_capture.first = on_which;
 				mouse_capture.second++;
@@ -353,14 +366,16 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
-				if (focused)
+				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				bool is_focus = logic->set_focus();
+				if (is_focus && focused && focused != on_which)
 				{
-					auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+					auto logic = std::dynamic_pointer_cast<logic_widget>(focused);
 					logic->kill_focus();
 					focused.reset();
 				}
-				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
-				logic->set_focus();
+				if (is_focus)
+					focused = on_which;
 				logic->on_mid_down(x - logic->x, y - logic->y);
 				mouse_capture.first = on_which;
 				mouse_capture.second++;
@@ -380,14 +395,16 @@ namespace direct_ui
 				on_which = mouse_capture.first;
 			if (on_which)
 			{
-				if (focused)
+				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+				bool is_focus = logic->set_focus();
+				if (is_focus && focused && focused != on_which)
 				{
-					auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
+					auto logic = std::dynamic_pointer_cast<logic_widget>(focused);
 					logic->kill_focus();
 					focused.reset();
 				}
-				auto logic = std::dynamic_pointer_cast<logic_widget>(on_which);
-				logic->set_focus();
+				if (is_focus)
+					focused = on_which;
 				logic->on_right_down(x - logic->x, y - logic->y);
 				mouse_capture.first = on_which;
 				mouse_capture.second++;

@@ -59,12 +59,14 @@ namespace direct_ui
 						tme.dwHoverTime = 0;
 						TrackMouseEvent(&tme);
 						builtin_scene->on_mouse_move(x, y);
+						InvalidateRect(hwnd, nullptr, FALSE);
 					});
 				break;
 			}
 			case WM_MOUSELEAVE:
 			{
 				builtin_scene->on_mouse_leave();
+				InvalidateRect(hwnd, nullptr, FALSE);
 				break;
 			}
 			case WM_LBUTTONDOWN:
@@ -75,6 +77,7 @@ namespace direct_ui
 						if (capture_count++)
 							SetCapture(hwnd);
 						builtin_scene->on_left_down(x, y);
+						InvalidateRect(hwnd, nullptr, FALSE);
 					});
 				break;
 			}
@@ -86,6 +89,7 @@ namespace direct_ui
 						builtin_scene->on_left_up(x, y);
 						if (--capture_count)
 							ReleaseCapture();
+						InvalidateRect(hwnd, nullptr, FALSE);
 					});
 				break;
 			}
@@ -97,6 +101,7 @@ namespace direct_ui
 						if (capture_count++)
 							SetCapture(hwnd);
 						builtin_scene->on_mid_down(x, y);
+						InvalidateRect(hwnd, nullptr, FALSE);
 					});
 				break;
 			}
@@ -108,6 +113,7 @@ namespace direct_ui
 						builtin_scene->on_mid_up(x, y);
 						if (--capture_count)
 							ReleaseCapture();
+						InvalidateRect(hwnd, nullptr, FALSE);
 					});
 				break;
 			}
@@ -119,6 +125,7 @@ namespace direct_ui
 						if (capture_count++)
 							SetCapture(hwnd);
 						builtin_scene->on_right_down(x, y);
+						InvalidateRect(hwnd, nullptr, FALSE);
 					});
 				break;
 			}
@@ -130,6 +137,7 @@ namespace direct_ui
 						builtin_scene->on_right_up(x, y);
 						if (--capture_count)
 							ReleaseCapture();
+						InvalidateRect(hwnd, nullptr, FALSE);
 					});
 				break;
 			}

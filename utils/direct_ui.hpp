@@ -332,6 +332,16 @@ namespace direct_ui
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
 		}
+		void on_set_focus()
+		{
+			for (const auto& widget : widgets)
+				to_logic(widget)->activate();
+		}
+		void on_kill_focus()
+		{
+			for (const auto& widget : widgets)
+				to_logic(widget)->deactivate();
+		}
 	public:
 		template <typename dep_widget_t>
 		std::shared_ptr<dep_widget_t> build_dep_widget()
@@ -451,7 +461,6 @@ namespace direct_ui
 		friend class scene;
 	};
 	using button = dep_widget<logic_button>;
-
 	template <>
 	class dep_widget<logic_rect> : public logic_rect, public dep_widget_base
 	{

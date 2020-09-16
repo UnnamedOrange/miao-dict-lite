@@ -141,6 +141,18 @@ namespace direct_ui
 					});
 				break;
 			}
+			case WM_SETFOCUS:
+			{
+				builtin_scene->on_set_focus();
+				InvalidateRect(hwnd, nullptr, FALSE);
+				break;
+			}
+			case WM_KILLFOCUS:
+			{
+				builtin_scene->on_kill_focus();
+				InvalidateRect(hwnd, nullptr, FALSE);
+				break;
+			}
 			}
 			return DuiWindowProc(hwnd, message, wParam, lParam);
 		}

@@ -158,6 +158,10 @@ namespace direct_ui
 		virtual void on_paint() const = 0;
 
 		friend class scene;
+	private:
+		std::weak_ptr<scene> _ancestor;
+	public:
+		const std::weak_ptr<scene>& ancestor{ _ancestor };
 	};
 
 	template <typename logic_t>
@@ -228,6 +232,7 @@ namespace direct_ui
 	{
 		ID2D1Factory* pFactory;
 		ID2D1RenderTarget* pRenderTarget;
+		std::weak_ptr<scene> self;
 
 	public:
 		std::vector<std::shared_ptr<dep_widget_base>> widgets;
@@ -380,6 +385,7 @@ namespace direct_ui
 		{
 			using decayed = std::decay_t<dep_widget_t>;
 			auto ret = std::make_shared<decayed>();
+			ret->_ancestor = self;
 			ret->pFactory = pFactory;
 			ret->pRenderTarget = pRenderTarget;
 			ret->init_resources();
@@ -418,7 +424,9 @@ namespace direct_ui
 				&pRenderTarget)))
 				throw std::runtime_error("Fail to CreateHwndRenderTarget.");
 			pRenderTarget->SetDpi(USER_DEFAULT_SCREEN_DPI, USER_DEFAULT_SCREEN_DPI);
-			return std::make_shared<scene>(pFactory, pRenderTarget);
+			auto ret = std::make_shared<scene>(pFactory, pRenderTarget);
+			ret->self = ret;
+			return ret;
 		}
 	};
 #endif

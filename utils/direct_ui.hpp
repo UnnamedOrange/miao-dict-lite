@@ -45,7 +45,6 @@ public:
 	auto crend() const { return iterable.cend(); }
 };
 
-#if _MSVC_LANG
 class timer
 {
 	std::atomic<bool> exit{};
@@ -107,7 +106,6 @@ public:
 		cv.notify_one();
 	}
 };
-#endif
 
 namespace direct_ui
 {

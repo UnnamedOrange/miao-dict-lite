@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <queue>
 #include <unordered_set>
 #include <unordered_map>
 #include <type_traits>
@@ -14,6 +15,8 @@
 #include <optional>
 #include <concepts>
 #include <ranges>
+
+#include "lock_view.hpp"
 
 #if _MSVC_LANG
 #include <Windows.h>
@@ -47,8 +50,9 @@ public:
 
 class timer
 {
-	std::atomic<bool> exit{};
+	bool exit{};
 	std::atomic<bool> prompt{};
+	std::atomic<bool> disabled_once{};
 	std::condition_variable cv;
 	std::chrono::high_resolution_clock::duration elapse{};
 	std::function<void()> callback;
@@ -72,7 +76,12 @@ class timer
 				break;
 
 			if (elapse.count())
-				callback();
+			{
+				if (disabled_once)
+					disabled_once = false;
+				else
+					callback();
+			}
 		}
 	}
 	std::thread timer_thread{ &timer::thread_routine, this };
@@ -91,12 +100,13 @@ public:
 	timer& operator=(const timer&) = delete;
 	timer& operator=(timer&&) = delete;
 public:
-	void set(std::chrono::high_resolution_clock::duration elapse)
+	void set(std::chrono::high_resolution_clock::duration elapse, bool right_now = true)
 	{
 		if (!elapse.count())
 			elapse += std::chrono::high_resolution_clock::duration(1);
 		this->elapse = elapse;
 		prompt = true;
+		disabled_once = !right_now;
 		cv.notify_one();
 	}
 	void kill()
@@ -304,12 +314,9 @@ namespace direct_ui
 		std::pair<std::shared_ptr<dep_widget_base>, int> mouse_capture{};
 		std::shared_ptr<dep_widget_base> focused;
 
-	private:
-		std::mutex mtx;
 	public:
 		void on_paint()
 		{
-			std::lock_guard gurad(mtx);
 			pRenderTarget->BeginDraw();
 			D2D1_MATRIX_3X2_F transform;
 			pRenderTarget->GetTransform(&transform);
@@ -325,7 +332,6 @@ namespace direct_ui
 		}
 		void on_mouse_move(int x, int y)
 		{
-			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				if (mouse_capture.first != on_which)
@@ -355,7 +361,6 @@ namespace direct_ui
 		}
 		void on_mouse_leave()
 		{
-			std::lock_guard gurad(mtx);
 			if (mouse_on)
 			{
 				auto logic = to_logic(mouse_on);
@@ -365,7 +370,6 @@ namespace direct_ui
 		}
 		void on_left_down(int x, int y)
 		{
-			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -388,7 +392,6 @@ namespace direct_ui
 		}
 		void on_left_up(int x, int y)
 		{
-			std::lock_guard gurad(mtx);
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_left_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -396,7 +399,6 @@ namespace direct_ui
 		}
 		void on_mid_down(int x, int y)
 		{
-			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -419,7 +421,6 @@ namespace direct_ui
 		}
 		void on_mid_up(int x, int y)
 		{
-			std::lock_guard gurad(mtx);
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_mid_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -427,7 +428,6 @@ namespace direct_ui
 		}
 		void on_right_down(int x, int y)
 		{
-			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -450,7 +450,6 @@ namespace direct_ui
 		}
 		void on_right_up(int x, int y)
 		{
-			std::lock_guard gurad(mtx);
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_right_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -458,19 +457,16 @@ namespace direct_ui
 		}
 		void on_set_focus()
 		{
-			std::lock_guard gurad(mtx);
 			for (const auto& widget : widgets)
 				to_logic(widget)->activate();
 		}
 		void on_kill_focus()
 		{
-			std::lock_guard gurad(mtx);
 			for (const auto& widget : widgets)
 				to_logic(widget)->deactivate();
 		}
 		void on_update()
 		{
-			//std::lock_guard gurad(mtx);
 			auto now = std::chrono::high_resolution_clock::now();
 			auto period = now - pre;
 			for (const auto& widget : widgets)
@@ -556,6 +552,8 @@ namespace direct_ui
 		std::function<void()> callback{ [] {} };
 	protected:
 		mutable double frame{};
+		static constexpr real max_radius = 233;
+		mutable lockfree<std::deque<std::tuple<real, real, real>>> circles;
 	public:
 		virtual void on_update(std::chrono::high_resolution_clock::duration interval) override
 		{
@@ -576,6 +574,22 @@ namespace direct_ui
 				if (std::abs(frame - target_frame) > 1e-6)
 					require_update();
 			}
+			{
+				auto view = circles.view();
+				constexpr real speed = 400;
+				real step = speed * sec;
+				for (auto& t : *view)
+					std::get<2>(t) += step;
+				while (!view->empty())
+				{
+					if (std::get<2>(view->front()) > max_radius)
+						view->pop_front();
+					else
+						break;
+				}
+				if (!view->empty())
+					require_update();
+			}
 		}
 		virtual void on_mouse_hover() override
 		{
@@ -590,6 +604,10 @@ namespace direct_ui
 		virtual void on_left_down(real x, real y) override
 		{
 			is_mouse_down++;
+			{
+				auto view = circles.view();
+				view->push_back({ x, y, 0 });
+			}
 			require_update();
 		}
 		virtual void on_left_up(real x, real y) override
@@ -612,6 +630,24 @@ namespace direct_ui
 		virtual void on_paint() const override
 		{
 			pRenderTarget->FillRectangle(D2D1::RectF(0, 0, cx, cy), brush);
+			{
+				pRenderTarget->PushAxisAlignedClip(D2D1::RectF(0, 0, cx, cy),
+					D2D1_ANTIALIAS_MODE::D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+				auto view = circles.view();
+				for (const auto& c : *view)
+				{
+					const auto& [x, y, r] = c;
+
+					ID2D1SolidColorBrush* circle_brush{};
+					real value = 0x7A + (0xCC - 0x7A) * (r / max_radius);
+					value /= 255;
+					auto color = D2D1::ColorF(value, value, value, 0.5);
+					pRenderTarget->CreateSolidColorBrush(color, &circle_brush);
+					pRenderTarget->FillEllipse(D2D1::Ellipse(D2D1::Point2F(x, y), r, r), circle_brush);
+					circle_brush->Release();
+				}
+				pRenderTarget->PopAxisAlignedClip();
+			}
 			if (frame)
 			{
 				auto properties = D2D1::StrokeStyleProperties();

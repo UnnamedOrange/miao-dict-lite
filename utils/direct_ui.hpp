@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_set>
+#include <unordered_map>
 #include <type_traits>
 #include <functional>
 #include <chrono>
@@ -43,22 +44,21 @@ public:
 #if _MSVC_LANG
 class timer
 {
-	inline static std::unordered_set<UINT_PTR> exists;
+	inline static std::unordered_map<UINT_PTR, timer*> exists;
 	static void CALLBACK TimerProc(HWND hwnd, UINT message, UINT_PTR id, DWORD elapse)
 	{
 		if (!exists.count(id))
 			return;
-		reinterpret_cast<timer*>(id)->callback();
+		exists[id]->callback();
 	}
+	UINT_PTR id{};
 public:
 	timer(std::function<void()> callback = [] {}) : callback(callback)
 	{
-		exists.insert(reinterpret_cast<UINT_PTR>(this));
 	}
 	~timer()
 	{
 		kill();
-		exists.erase(reinterpret_cast<UINT_PTR>(this));
 	}
 	timer(const timer&) = delete;
 	timer(timer&&) = delete;
@@ -66,13 +66,19 @@ public:
 	timer& operator=(timer&&) = delete;
 public:
 	std::function<void()> callback;
-	void set(DWORD elapse) const
+	void set(DWORD elapse)
 	{
-		SetTimer(nullptr, reinterpret_cast<UINT_PTR>(this), elapse, &timer::TimerProc);
+		id = SetTimer(nullptr, id, elapse, &timer::TimerProc);
+		exists[id] = this;
 	}
-	void kill() const
+	void kill()
 	{
-		KillTimer(nullptr, reinterpret_cast<UINT_PTR>(this));
+		if (id)
+		{
+			KillTimer(nullptr, id);
+			exists.erase(id);
+			id = NULL;
+		}
 	}
 };
 #endif
@@ -222,10 +228,12 @@ namespace direct_ui
 	private:
 		timer update_timer{ [this]()
 		{
-			if (update_flag)
-				on_update();
+			bool into = update_flag;
 			update_flag = false;
-			update_timer.kill();
+			if (into)
+				on_update();
+			if (!update_flag)
+				update_timer.kill();
 		} };
 		bool update_flag{};
 		std::chrono::high_resolution_clock::time_point pre{};
@@ -270,8 +278,16 @@ namespace direct_ui
 		void on_paint()
 		{
 			pRenderTarget->BeginDraw();
+			D2D1_MATRIX_3X2_F transform;
+			pRenderTarget->GetTransform(&transform);
 			for (const auto& widget : widgets)
+			{
+				auto logic = to_logic(widget);
+				auto move = D2D1::Matrix3x2F::Translation(logic->x, logic->y);
+				pRenderTarget->SetTransform(transform * move);
 				widget->on_paint();
+			}
+			pRenderTarget->SetTransform(transform);
 			pRenderTarget->EndDraw();
 		}
 		void on_mouse_move(int x, int y)
@@ -305,7 +321,12 @@ namespace direct_ui
 		}
 		void on_mouse_leave()
 		{
-			mouse_on.reset();
+			if (mouse_on)
+			{
+				auto logic = to_logic(mouse_on);
+				logic->on_mouse_leave();
+				mouse_on.reset();
+			}
 		}
 		void on_left_down(int x, int y)
 		{
@@ -486,22 +507,44 @@ namespace direct_ui
 		int is_mouse_down{};
 	public:
 		std::function<void()> callback{ [] {} };
+	protected:
+		mutable int frame{};
 	public:
+		virtual void on_update(std::chrono::high_resolution_clock::duration interval) override
+		{
+			using namespace std::chrono;
+			auto milli = duration_cast<milliseconds>(interval).count();
+
+			{
+				int target_frame = 0;
+				if (is_mouse_hover && !is_mouse_down)
+					target_frame = 100;
+				int delta = std::abs(target_frame - frame);
+				delta = static_cast<int>(std::ceil(delta * 0.3));
+				frame += (target_frame > frame) ? delta : -delta;
+				if (frame != target_frame)
+					require_update();
+			}
+		}
 		virtual void on_mouse_hover() override
 		{
 			is_mouse_hover = true;
+			require_update();
 		}
 		virtual void on_mouse_leave() override
 		{
 			is_mouse_hover = false;
+			require_update();
 		}
 		virtual void on_left_down(real x, real y) override
 		{
 			is_mouse_down++;
+			require_update();
 		}
 		virtual void on_left_up(real x, real y) override
 		{
 			is_mouse_down--;
+			require_update();
 			if (is_mouse_hover)
 				callback();
 		}
@@ -512,23 +555,32 @@ namespace direct_ui
 	class dep_widget<logic_button> : public logic_button, public dep_widget_base
 	{
 		ID2D1SolidColorBrush* brush{};
+		ID2D1SolidColorBrush* brush_frame{};
 
 	public:
 		virtual void on_paint() const override
 		{
-			pRenderTarget->FillRectangle(D2D1::RectF(x, y, x + cx, y + cy), brush);
+			pRenderTarget->FillRectangle(D2D1::RectF(0, 0, cx, cy), brush);
+			if (frame)
+			{
+				auto properties = D2D1::StrokeStyleProperties();
+				pRenderTarget->DrawRectangle(D2D1::RectF(0, 0, cx, cy), brush_frame, 4.0f * frame / 100);
+			}
 		}
 
 	private:
 		virtual void init_resources() override
 		{
-			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::AliceBlue), &brush);
+			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xCCCCCC), &brush);
+			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x7A7A7A), &brush_frame);
 		}
 	public:
 		~dep_widget()
 		{
 			if (brush)
 				brush->Release();
+			if (brush_frame)
+				brush_frame->Release();
 		}
 
 		friend class scene;
@@ -540,7 +592,7 @@ namespace direct_ui
 	public:
 		virtual void on_paint() const override
 		{
-			auto rect = D2D1::Rect(x, y, x + cx, y + cy);
+			auto rect = D2D1::RectF(0, 0, cx, cy);
 			{
 				ID2D1SolidColorBrush* brush;
 				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(brush_color, (brush_color >> 24) / 255.f), &brush);

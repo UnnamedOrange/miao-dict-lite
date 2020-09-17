@@ -74,7 +74,7 @@ namespace direct_ui
 				HANDLE_WM_LBUTTONDOWN(hwnd, wParam, lParam,
 					[this](HWND hwnd, BOOL fDoubleClick, int x, int y, UINT keyFlags)
 					{
-						if (capture_count++)
+						if (!(capture_count++))
 							SetCapture(hwnd);
 						builtin_scene->on_left_down(x, y);
 						InvalidateRect(hwnd, nullptr, FALSE);
@@ -87,7 +87,7 @@ namespace direct_ui
 					[this](HWND hwnd, int x, int y, UINT keyFlags)
 					{
 						builtin_scene->on_left_up(x, y);
-						if (--capture_count)
+						if (!(--capture_count))
 							ReleaseCapture();
 						InvalidateRect(hwnd, nullptr, FALSE);
 					});
@@ -98,7 +98,7 @@ namespace direct_ui
 				HANDLE_WM_LBUTTONDOWN(hwnd, wParam, lParam,
 					[this](HWND hwnd, BOOL fDoubleClick, int x, int y, UINT keyFlags)
 					{
-						if (capture_count++)
+						if (!(capture_count++))
 							SetCapture(hwnd);
 						builtin_scene->on_mid_down(x, y);
 						InvalidateRect(hwnd, nullptr, FALSE);
@@ -111,7 +111,7 @@ namespace direct_ui
 					[this](HWND hwnd, int x, int y, UINT keyFlags)
 					{
 						builtin_scene->on_mid_up(x, y);
-						if (--capture_count)
+						if (!(--capture_count))
 							ReleaseCapture();
 						InvalidateRect(hwnd, nullptr, FALSE);
 					});
@@ -122,7 +122,7 @@ namespace direct_ui
 				HANDLE_WM_LBUTTONDOWN(hwnd, wParam, lParam,
 					[this](HWND hwnd, BOOL fDoubleClick, int x, int y, UINT keyFlags)
 					{
-						if (capture_count++)
+						if (!(capture_count++))
 							SetCapture(hwnd);
 						builtin_scene->on_right_down(x, y);
 						InvalidateRect(hwnd, nullptr, FALSE);
@@ -135,7 +135,7 @@ namespace direct_ui
 					[this](HWND hwnd, int x, int y, UINT keyFlags)
 					{
 						builtin_scene->on_right_up(x, y);
-						if (--capture_count)
+						if (!(--capture_count))
 							ReleaseCapture();
 						InvalidateRect(hwnd, nullptr, FALSE);
 					});

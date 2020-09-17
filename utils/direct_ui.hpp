@@ -6,6 +6,10 @@
 #include <unordered_map>
 #include <type_traits>
 #include <functional>
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include <chrono>
 #include <optional>
 #include <concepts>
@@ -44,41 +48,63 @@ public:
 #if _MSVC_LANG
 class timer
 {
-	inline static std::unordered_map<UINT_PTR, timer*> exists;
-	static void CALLBACK TimerProc(HWND hwnd, UINT message, UINT_PTR id, DWORD elapse)
+	std::atomic<bool> exit{};
+	std::atomic<bool> prompt{};
+	std::condition_variable cv;
+	std::chrono::high_resolution_clock::duration elapse{};
+	std::function<void()> callback;
+
+	void thread_routine()
 	{
-		if (!exists.count(id))
-			return;
-		exists[id]->callback();
+		while (!exit)
+		{
+			std::mutex mtx;
+			std::unique_lock<std::mutex> lck(mtx);
+			cv.wait(lck, [&]()->bool
+				{
+					return elapse.count() || prompt || exit;
+				});
+			cv.wait_for(lck, elapse, [&]()->bool
+				{
+					return prompt || exit;
+				});
+			prompt = false;
+			if (exit)
+				break;
+
+			if (elapse.count())
+				callback();
+		}
 	}
-	UINT_PTR id{};
+	std::thread timer_thread{ &timer::thread_routine, this };
 public:
 	timer(std::function<void()> callback = [] {}) : callback(callback)
 	{
 	}
 	~timer()
 	{
-		kill();
+		exit = true;
+		cv.notify_one();
+		timer_thread.join();
 	}
 	timer(const timer&) = delete;
 	timer(timer&&) = delete;
 	timer& operator=(const timer&) = delete;
 	timer& operator=(timer&&) = delete;
 public:
-	std::function<void()> callback;
-	void set(DWORD elapse)
+	void set(std::chrono::high_resolution_clock::duration elapse)
 	{
-		id = SetTimer(nullptr, id, elapse, &timer::TimerProc);
-		exists[id] = this;
+		if (!elapse.count())
+			elapse += std::chrono::high_resolution_clock::duration(1);
+		this->elapse = elapse;
+		prompt = true;
+		cv.notify_one();
 	}
 	void kill()
 	{
-		if (id)
-		{
-			KillTimer(nullptr, id);
-			exists.erase(id);
-			id = NULL;
-		}
+		elapse = elapse.zero();
+		prompt = true;
+		cv.notify_one();
 	}
 };
 #endif
@@ -207,15 +233,17 @@ namespace direct_ui
 	{
 		ID2D1Factory* pFactory;
 		ID2D1RenderTarget* pRenderTarget;
+		HWND hwnd;
 		std::weak_ptr<scene> self;
 
 	public:
 		std::vector<std::shared_ptr<dep_widget_base>> widgets;
 
 	public:
-		scene(ID2D1Factory* pFactory, ID2D1RenderTarget* pRenderTarget) :
+		scene(ID2D1Factory* pFactory, ID2D1RenderTarget* pRenderTarget, HWND hwnd) :
 			pFactory(pFactory),
-			pRenderTarget(pRenderTarget)
+			pRenderTarget(pRenderTarget),
+			hwnd(hwnd)
 		{
 
 		}
@@ -226,15 +254,19 @@ namespace direct_ui
 		}
 
 	private:
-		timer update_timer{ [this]()
+		void timer_routine()
 		{
+			auto new_pre = std::chrono::high_resolution_clock::now();
 			bool into = update_flag;
 			update_flag = false;
 			if (into)
 				on_update();
 			if (!update_flag)
 				update_timer.kill();
-		} };
+			else
+				pre = new_pre;
+		}
+		timer update_timer{ std::bind(&scene::timer_routine, this) };
 		bool update_flag{};
 		std::chrono::high_resolution_clock::time_point pre{};
 	public:
@@ -245,7 +277,7 @@ namespace direct_ui
 				pre = std::chrono::high_resolution_clock::now();
 				update_flag = true;
 			}
-			update_timer.set(0);
+			update_timer.set(std::chrono::milliseconds(10));
 		}
 		void resize(int width, int height)
 		{
@@ -274,9 +306,12 @@ namespace direct_ui
 		std::pair<std::shared_ptr<dep_widget_base>, int> mouse_capture{};
 		std::shared_ptr<dep_widget_base> focused;
 
+	private:
+		std::mutex mtx;
 	public:
 		void on_paint()
 		{
+			std::lock_guard gurad(mtx);
 			pRenderTarget->BeginDraw();
 			D2D1_MATRIX_3X2_F transform;
 			pRenderTarget->GetTransform(&transform);
@@ -292,6 +327,7 @@ namespace direct_ui
 		}
 		void on_mouse_move(int x, int y)
 		{
+			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				if (mouse_capture.first != on_which)
@@ -321,6 +357,7 @@ namespace direct_ui
 		}
 		void on_mouse_leave()
 		{
+			std::lock_guard gurad(mtx);
 			if (mouse_on)
 			{
 				auto logic = to_logic(mouse_on);
@@ -330,6 +367,7 @@ namespace direct_ui
 		}
 		void on_left_down(int x, int y)
 		{
+			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -352,6 +390,7 @@ namespace direct_ui
 		}
 		void on_left_up(int x, int y)
 		{
+			std::lock_guard gurad(mtx);
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_left_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -359,6 +398,7 @@ namespace direct_ui
 		}
 		void on_mid_down(int x, int y)
 		{
+			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -381,6 +421,7 @@ namespace direct_ui
 		}
 		void on_mid_up(int x, int y)
 		{
+			std::lock_guard gurad(mtx);
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_mid_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -388,6 +429,7 @@ namespace direct_ui
 		}
 		void on_right_down(int x, int y)
 		{
+			std::lock_guard gurad(mtx);
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -410,6 +452,7 @@ namespace direct_ui
 		}
 		void on_right_up(int x, int y)
 		{
+			std::lock_guard gurad(mtx);
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_right_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -417,20 +460,25 @@ namespace direct_ui
 		}
 		void on_set_focus()
 		{
+			std::lock_guard gurad(mtx);
 			for (const auto& widget : widgets)
 				to_logic(widget)->activate();
 		}
 		void on_kill_focus()
 		{
+			std::lock_guard gurad(mtx);
 			for (const auto& widget : widgets)
 				to_logic(widget)->deactivate();
 		}
 		void on_update()
 		{
+			//std::lock_guard gurad(mtx);
 			auto now = std::chrono::high_resolution_clock::now();
 			auto period = now - pre;
 			for (const auto& widget : widgets)
 				to_logic(widget)->on_update(period);
+			if (hwnd)
+				InvalidateRect(hwnd, nullptr, FALSE);
 		}
 	public:
 		template <typename dep_widget_t>
@@ -478,7 +526,7 @@ namespace direct_ui
 				&pRenderTarget)))
 				throw std::runtime_error("Fail to CreateHwndRenderTarget.");
 			pRenderTarget->SetDpi(USER_DEFAULT_SCREEN_DPI, USER_DEFAULT_SCREEN_DPI);
-			auto ret = std::make_shared<scene>(pFactory, pRenderTarget);
+			auto ret = std::make_shared<scene>(pFactory, pRenderTarget, hwnd);
 			ret->self = ret;
 			return ret;
 		}
@@ -486,7 +534,8 @@ namespace direct_ui
 #endif
 	inline void direct_ui::logic_widget::require_update()
 	{
-		ancestor.lock()->update();
+		if (!ancestor.expired())
+			ancestor.lock()->update();
 	}
 
 	class logic_rect : public logic_widget
@@ -508,21 +557,25 @@ namespace direct_ui
 	public:
 		std::function<void()> callback{ [] {} };
 	protected:
-		mutable int frame{};
+		mutable double frame{};
 	public:
 		virtual void on_update(std::chrono::high_resolution_clock::duration interval) override
 		{
 			using namespace std::chrono;
-			auto milli = duration_cast<milliseconds>(interval).count();
+			auto sec = duration_cast<duration<double>>(interval).count();
 
 			{
-				int target_frame = 0;
+				double target_frame = 0;
 				if (is_mouse_hover && !is_mouse_down)
 					target_frame = 100;
-				int delta = std::abs(target_frame - frame);
-				delta = static_cast<int>(std::ceil(delta * 0.3));
-				frame += (target_frame > frame) ? delta : -delta;
-				if (frame != target_frame)
+				constexpr double speed = 1000;
+				double step = speed * sec;
+				frame += (target_frame > frame ? step : -step);
+				if (!(0 <= frame))
+					frame = 0;
+				if (!(frame <= 100))
+					frame = 100;
+				if (std::abs(frame - target_frame) > 1e-6)
 					require_update();
 			}
 		}
@@ -564,7 +617,7 @@ namespace direct_ui
 			if (frame)
 			{
 				auto properties = D2D1::StrokeStyleProperties();
-				pRenderTarget->DrawRectangle(D2D1::RectF(0, 0, cx, cy), brush_frame, 4.0f * frame / 100);
+				pRenderTarget->DrawRectangle(D2D1::RectF(0, 0, cx, cy), brush_frame, 2.0f * frame / 100);
 			}
 		}
 

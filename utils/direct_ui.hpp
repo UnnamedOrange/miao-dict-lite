@@ -287,12 +287,25 @@ namespace direct_ui
 			}
 			update_timer.set(std::chrono::milliseconds(10));
 		}
-		void resize(int width, int height)
-		{
-			reinterpret_cast<ID2D1HwndRenderTarget*>(pRenderTarget)->Resize(D2D1::SizeU(width, height));
-		}
+	private:
+		real _cx{}, _cy{}, _scale{};
 	public:
-		auto on_hittest(int x, int y) const
+		const real& cx{ _cx };
+		const real& cy{ _cy };
+		const real& scale{ _scale };
+	public:
+		void resize(int width, int height, int dpi)
+		{
+			_scale = static_cast<real>(dpi) / USER_DEFAULT_SCREEN_DPI;
+			_cx = width / scale;
+			_cy = height / scale;
+			reinterpret_cast<ID2D1HwndRenderTarget*>(pRenderTarget)->Resize(D2D1::SizeU(width, height));
+			pRenderTarget->SetDpi(dpi, dpi);
+			on_resize(cx, cy);
+		}
+		std::function<void(real, real)> on_resize{ [](real, real) {} };
+	public:
+		auto on_hittest(real x, real y) const
 		{
 			std::shared_ptr<dep_widget_base> ret;
 			for (const auto& widget : reversed(widgets))
@@ -332,6 +345,8 @@ namespace direct_ui
 		}
 		void on_mouse_move(int x, int y)
 		{
+			x /= scale;
+			y /= scale;
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				if (mouse_capture.first != on_which)
@@ -370,6 +385,8 @@ namespace direct_ui
 		}
 		void on_left_down(int x, int y)
 		{
+			x /= scale;
+			y /= scale;
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -392,6 +409,8 @@ namespace direct_ui
 		}
 		void on_left_up(int x, int y)
 		{
+			x /= scale;
+			y /= scale;
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_left_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -399,6 +418,8 @@ namespace direct_ui
 		}
 		void on_mid_down(int x, int y)
 		{
+			x /= scale;
+			y /= scale;
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -421,6 +442,8 @@ namespace direct_ui
 		}
 		void on_mid_up(int x, int y)
 		{
+			x /= scale;
+			y /= scale;
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_mid_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))
@@ -428,6 +451,8 @@ namespace direct_ui
 		}
 		void on_right_down(int x, int y)
 		{
+			x /= scale;
+			y /= scale;
 			auto on_which = on_hittest(x, y);
 			if (mouse_capture.second)
 				on_which = mouse_capture.first;
@@ -450,6 +475,8 @@ namespace direct_ui
 		}
 		void on_right_up(int x, int y)
 		{
+			x /= scale;
+			y /= scale;
 			auto logic = to_logic(mouse_capture.first);
 			logic->on_right_up(x - logic->x, y - logic->y);
 			if (!(--mouse_capture.second))

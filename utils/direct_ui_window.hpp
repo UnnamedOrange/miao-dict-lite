@@ -25,7 +25,7 @@ namespace direct_ui
 			case WM_CREATE:
 			{
 				_builtin_scene = dui_scene_factory.build_hwnd_scene(hwnd);
-				builtin_scene->resize(cwidth(), cheight());
+				builtin_scene->resize(cwidth(), cheight(), dpi() * USER_DEFAULT_SCREEN_DPI + 0.5);
 				break;
 			}
 			case WM_DESTROY:
@@ -44,7 +44,7 @@ namespace direct_ui
 				HANDLE_WM_SIZE(hwnd, wParam, lParam,
 					[this](HWND hwnd, UINT state, int cx, int cy)
 					{
-						builtin_scene->resize(cx, cy);
+						builtin_scene->resize(cx, cy, dpi() * USER_DEFAULT_SCREEN_DPI + 0.5);
 					});
 				break;
 			}

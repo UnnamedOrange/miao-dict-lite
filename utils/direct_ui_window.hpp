@@ -153,6 +153,18 @@ namespace direct_ui
 				InvalidateRect(hwnd, nullptr, FALSE);
 				break;
 			}
+			case WM_DPICHANGED:
+			{
+				RECT* const prcNewWindow = (RECT*)lParam;
+				SetWindowPos(hwnd,
+					NULL,
+					prcNewWindow->left,
+					prcNewWindow->top,
+					prcNewWindow->right - prcNewWindow->left,
+					prcNewWindow->bottom - prcNewWindow->top,
+					SWP_NOZORDER | SWP_NOACTIVATE);
+				break;
+			}
 			}
 			return DuiWindowProc(hwnd, message, wParam, lParam);
 		}

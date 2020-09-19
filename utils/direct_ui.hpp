@@ -17,6 +17,7 @@
 #include <ranges>
 
 #include "lock_view.hpp"
+#include "code_conv.hpp"
 
 #if _MSVC_LANG
 #include <Windows.h>
@@ -24,7 +25,9 @@
 #undef max
 #include <d2d1.h>
 #include <d2d1_1.h>
+#include <dwrite.h>
 #pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
 #endif
 
 template <typename T>
@@ -446,17 +449,20 @@ namespace direct_ui
 #if _MSVC_LANG
 	class scene
 	{
+		std::weak_ptr<scene> self;
+	public:
 		ID2D1Factory* pFactory;
+		IDWriteFactory* pDWriteFactory;
 		ID2D1RenderTarget* pRenderTarget;
 		HWND hwnd;
-		std::weak_ptr<scene> self;
 
 	public:
 		std::shared_ptr<group> contents;
 
 	public:
-		scene(ID2D1Factory* pFactory, ID2D1RenderTarget* pRenderTarget, HWND hwnd) :
+		scene(ID2D1Factory* pFactory, IDWriteFactory* pDWriteFactory, ID2D1RenderTarget* pRenderTarget, HWND hwnd) :
 			pFactory(pFactory),
+			pDWriteFactory(pDWriteFactory),
 			pRenderTarget(pRenderTarget),
 			hwnd(hwnd),
 			contents(build_dep_widget<group>())
@@ -586,6 +592,7 @@ namespace direct_ui
 	class scene_factory
 	{
 		ID2D1Factory* pFactory;
+		IDWriteFactory* pDWriteFactory;
 
 	public:
 		scene_factory()
@@ -593,6 +600,11 @@ namespace direct_ui
 			if (FAILED(D2D1CreateFactory(
 				D2D1_FACTORY_TYPE::D2D1_FACTORY_TYPE_MULTI_THREADED, &pFactory)))
 				throw std::runtime_error("Fail to D2D1CreateFactory.");
+			if (FAILED(DWriteCreateFactory(
+				DWRITE_FACTORY_TYPE_SHARED,
+				__uuidof(IDWriteFactory),
+				reinterpret_cast<IUnknown**>(&pDWriteFactory))))
+				throw std::runtime_error("Fail to DWriteCreateFactory.");
 		}
 		scene_factory(const scene_factory&) = delete;
 		scene_factory(scene_factory&&) = delete;
@@ -602,6 +614,8 @@ namespace direct_ui
 		{
 			if (pFactory)
 				pFactory->Release();
+			if (pDWriteFactory)
+				pDWriteFactory->Release();
 		}
 
 	public:
@@ -613,7 +627,7 @@ namespace direct_ui
 				&pRenderTarget)))
 				throw std::runtime_error("Fail to CreateHwndRenderTarget.");
 			pRenderTarget->SetDpi(USER_DEFAULT_SCREEN_DPI, USER_DEFAULT_SCREEN_DPI);
-			auto ret = std::make_shared<scene>(pFactory, pRenderTarget, hwnd);
+			auto ret = std::make_shared<scene>(pFactory, pDWriteFactory, pRenderTarget, hwnd);
 			ret->self = ret;
 			return ret;
 		}
@@ -632,6 +646,7 @@ namespace direct_ui
 		int is_mouse_down{};
 	public:
 		std::function<void()> callback{ [] {} };
+		std::u8string caption;
 	protected:
 		mutable double frame{};
 		static constexpr real max_radius = 233;
@@ -706,6 +721,8 @@ namespace direct_ui
 	{
 		ID2D1SolidColorBrush* brush{};
 		ID2D1SolidColorBrush* brush_frame{};
+		ID2D1SolidColorBrush* brush_font{};
+		IDWriteTextFormat* text_format{};
 
 	public:
 		virtual void on_paint() const override
@@ -734,6 +751,13 @@ namespace direct_ui
 				auto properties = D2D1::StrokeStyleProperties();
 				pRenderTarget->DrawRectangle(D2D1::RectF(0, 0, cx, cy), brush_frame, 2.0f * frame / 100);
 			}
+			{
+				auto str = code_conv<char8_t, wchar_t>::convert(caption);
+				pRenderTarget->DrawTextW(str.c_str(),
+					str.length(), text_format,
+					D2D1::RectF(0, 0, cx, cy),
+					brush_font);
+			}
 		}
 
 	private:
@@ -741,6 +765,19 @@ namespace direct_ui
 		{
 			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0xCCCCCC), &brush);
 			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x7A7A7A), &brush_frame);
+			pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x000000), &brush_font);
+			IDWriteFactory* dwFactory = ancestor.lock()->pDWriteFactory;
+			dwFactory->CreateTextFormat(
+				L"Segoe UI",                // Font family name.
+				nullptr,                       // Font collection (NULL sets it to use the system font collection).
+				DWRITE_FONT_WEIGHT_REGULAR,
+				DWRITE_FONT_STYLE_NORMAL,
+				DWRITE_FONT_STRETCH_NORMAL,
+				14.0f,
+				L"",
+				&text_format);
+			text_format->SetTextAlignment(DWRITE_TEXT_ALIGNMENT::DWRITE_TEXT_ALIGNMENT_CENTER);
+			text_format->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 		}
 	public:
 		~dep_widget()
@@ -749,6 +786,10 @@ namespace direct_ui
 				brush->Release();
 			if (brush_frame)
 				brush_frame->Release();
+			if (brush_font)
+				brush_font->Release();
+			if (text_format)
+				text_format->Release();
 		}
 
 		friend class scene;

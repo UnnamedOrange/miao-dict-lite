@@ -219,7 +219,7 @@ namespace direct_ui
 		friend class scene;
 	};
 	template <typename logic_t>
-	class dep_widget : public dep_widget_interface<logic_t>
+	class dep_widget : virtual public dep_widget_interface<logic_t>
 	{
 	protected:
 #if _MSVC_LANG
@@ -559,7 +559,7 @@ namespace direct_ui
 			ancestor.lock()->update();
 	}
 
-	class logic_rect : public logic_widget
+	class logic_rect : virtual public logic_widget
 	{
 	public:
 		unsigned int brush_color{};
@@ -570,7 +570,7 @@ namespace direct_ui
 			is_focusable = false;
 		}
 	};
-	class logic_button : public logic_widget
+	class logic_button : virtual public logic_widget
 	{
 	protected:
 		bool is_mouse_hover{};
@@ -648,7 +648,7 @@ namespace direct_ui
 
 #if _MSVC_LANG
 	template <>
-	class dep_widget<logic_button> : public logic_button, public dep_widget_base
+	class dep_widget<logic_button> : virtual public logic_button, virtual public dep_widget_base
 	{
 		ID2D1SolidColorBrush* brush{};
 		ID2D1SolidColorBrush* brush_frame{};
@@ -701,7 +701,7 @@ namespace direct_ui
 	};
 	using button = dep_widget<logic_button>;
 	template <>
-	class dep_widget<logic_rect> : public logic_rect, public dep_widget_base
+	class dep_widget<logic_rect> : virtual public logic_rect, virtual public dep_widget_base
 	{
 	public:
 		virtual void on_paint() const override

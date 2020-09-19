@@ -17,6 +17,16 @@ class fixture_window final : public dui_window
 		{
 			HANDLE_MSG(hwnd, WM_CREATE, OnCreate);
 			HANDLE_MSG(hwnd, WM_DESTROY, OnDestroy);
+		case WM_DISPLAYCHANGE:
+		case WM_DPICHANGED:
+		{
+			RECT wa = work_area();
+			right(wa.right - dpi(16));
+			left(wa.right - dpi(300));
+			bottom(wa.bottom - dpi(16));
+			top(wa.bottom - dpi(200));
+			break;
+		}
 
 		default:
 			return DefWindowProcW(hwnd, message, wParam, lParam);
@@ -38,6 +48,13 @@ class fixture_window final : public dui_window
 		left(wa.right - dpi(300));
 		bottom(wa.bottom - dpi(16));
 		top(wa.bottom - dpi(200));
+
+		auto bg_rect = s->build_dep_widget<rect>();
+		s->contents->widgets.push_back(bg_rect);
+		bg_rect->move(0, 0);
+		bg_rect->resize(s->cx, s->cy);
+		bg_rect->brush_color = 0xffffffff;
+
 		return TRUE;
 	}
 	void OnDestroy(HWND hwnd)

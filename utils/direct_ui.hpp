@@ -123,6 +123,50 @@ public:
 namespace direct_ui
 {
 	using real = float;
+	class color
+	{
+	public:
+		real r{};
+		real g{};
+		real b{};
+		real a{ 1 };
+	public:
+		static constexpr unsigned red_shift = 16;
+		static constexpr unsigned green_shift = 8;
+		static constexpr unsigned blue_shift = 0;
+		static constexpr unsigned alpha_shift = 24;
+		static constexpr unsigned red_mask = 0xff << red_shift;
+		static constexpr unsigned green_mask = 0xff << green_shift;
+		static constexpr unsigned blue_mask = 0xff << blue_shift;
+		static constexpr unsigned alpha_mask = 0xff << alpha_shift;
+	public:
+		color() = default;
+		color(unsigned int rgb_or_argb, unsigned char a = 0) :
+			r{ static_cast<real>((rgb_or_argb & red_mask) >> red_shift) / 255.f },
+			g{ static_cast<real>((rgb_or_argb & green_mask) >> green_shift) / 255.f },
+			b{ static_cast<real>((rgb_or_argb & blue_mask) >> blue_shift) / 255.f }
+		{
+			if (a)
+				this->a = static_cast<real>(a / 255.f);
+			else
+				this->a = static_cast<real>((rgb_or_argb & alpha_mask) >> alpha_shift) / 255.f;
+		}
+		color(real r, real g, real b, real a = 1.f) :
+			r(r), g(g), b(b), a(a) {}
+		color(unsigned r, unsigned g, unsigned b, unsigned a = 255) :
+			r(static_cast<real>(r) / 255.f),
+			g(static_cast<real>(g) / 255.f),
+			b(static_cast<real>(b) / 255.f),
+			a(static_cast<real>(a) / 255.f) {}
+
+#if _MSVC_LANG
+	public:
+		operator D2D1::ColorF() const
+		{
+			return D2D1::ColorF(r, g, b, a);
+		}
+#endif
+	};
 
 	class logic_widget
 	{
@@ -801,8 +845,8 @@ namespace direct_ui
 	class logic_rect : virtual public logic_widget
 	{
 	public:
-		unsigned int brush_color{};
-		unsigned int pen_color{};
+		color brush_color{};
+		color pen_color{};
 		real pen_size{};
 		logic_rect()
 		{
@@ -819,14 +863,14 @@ namespace direct_ui
 			auto rect = D2D1::RectF(0, 0, cx, cy);
 			{
 				ID2D1SolidColorBrush* brush;
-				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(brush_color, (brush_color >> 24) / 255.f), &brush);
+				pRenderTarget->CreateSolidColorBrush(brush_color, &brush);
 				pRenderTarget->FillRectangle(rect, brush);
 				brush->Release();
 			}
 			if (pen_size)
 			{
 				ID2D1SolidColorBrush* brush;
-				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(pen_color, (pen_color >> 24) / 255.f), &brush);
+				pRenderTarget->CreateSolidColorBrush(pen_color, &brush);
 				pRenderTarget->DrawRectangle(rect, brush, pen_size);
 				brush->Release();
 			}

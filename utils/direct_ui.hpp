@@ -176,14 +176,17 @@ namespace direct_ui
 		void activate()
 		{
 			_is_activated = true;
+			on_activate();
 		}
 		void deactivate()
 		{
 			_is_activated = false;
+			on_deactivate();
 		}
 
 	public:
 		virtual void on_resize(real cx, real cy) {}
+		virtual bool on_hittest(real x, real y) { return true; }
 		virtual void on_left_down(real x, real y) {}
 		virtual void on_left_up(real x, real y) {}
 		virtual void on_mid_down(real x, real y) {}
@@ -193,10 +196,9 @@ namespace direct_ui
 		virtual void on_mouse_move(real x, real y) {}
 		virtual void on_mouse_hover() {}
 		virtual void on_mouse_leave() {}
-		virtual void on_key_down(int vk) {}
-		virtual void on_key_up(int vk) {}
-		virtual void on_update(std::chrono::high_resolution_clock::duration interval) {}
-		virtual bool on_hittest(real x, real y) { return true; }
+		virtual void on_update(std::chrono::high_resolution_clock::duration elapsed) {}
+		virtual void on_activate() {}
+		virtual void on_deactivate() {}
 
 		friend class scene;
 	private:
@@ -229,12 +231,217 @@ namespace direct_ui
 		friend class scene;
 	};
 	using dep_widget_base = dep_widget<logic_widget>;
-	template <typename dep_t>
-	inline std::shared_ptr<logic_widget> to_logic(std::shared_ptr<dep_t> dep)
+
+	template <typename logic_t>
+	concept has_implimented_dep_widget = std::is_base_of_v<logic_t, dep_widget<logic_t>> &&
+		std::is_base_of_v<dep_widget_base, dep_widget<logic_t>>;
+
+	template <typename logic_t = logic_widget, typename dep_t>
+	inline std::shared_ptr<logic_t> to_logic(std::shared_ptr<dep_t> dep)
 		requires std::is_base_of_v<dep_widget_base, dep_t> || std::is_same_v<dep_widget_base, dep_t>
 	{
-		return std::dynamic_pointer_cast<logic_widget>(dep);
+		return std::dynamic_pointer_cast<logic_t>(dep);
 	}
+
+	class logic_group : virtual public logic_widget
+	{
+	public:
+		std::vector<std::shared_ptr<dep_widget_base>> widgets;
+
+	public:
+		auto hittest(real x, real y) const
+		{
+			std::shared_ptr<dep_widget_base> ret;
+			for (const auto& widget : reversed(widgets))
+			{
+				auto logic = to_logic(widget);
+				if (logic->x <= x && x < logic->x + logic->cx &&
+					logic->y <= y && y < logic->y + logic->cy &&
+					logic->on_hittest(x - logic->x, y - logic->y))
+				{
+					ret = widget;
+					break;
+				}
+			}
+			return ret;
+		}
+
+	public:
+		std::function<void(real, real)> resize_callback{ [](real, real) {} };
+	private:
+		std::shared_ptr<dep_widget_base> mouse_on;
+		std::pair<std::shared_ptr<dep_widget_base>, int> mouse_capture{};
+		std::shared_ptr<dep_widget_base> focused;
+	public:
+		virtual void on_resize(real cx, real cy) override
+		{
+			resize_callback(cx, cy);
+		}
+		virtual void on_left_down(real x, real y) override
+		{
+			auto on_which = hittest(x, y);
+			if (mouse_capture.second)
+				on_which = mouse_capture.first;
+			if (on_which)
+			{
+				auto logic = to_logic(on_which);
+				bool is_focus = logic->set_focus();
+				if (is_focus && focused && focused != on_which)
+				{
+					auto logic = to_logic(focused);
+					logic->kill_focus();
+					focused.reset();
+				}
+				if (is_focus)
+					focused = on_which;
+				logic->on_left_down(x - logic->x, y - logic->y);
+				mouse_capture.first = on_which;
+				mouse_capture.second++;
+			}
+		}
+		virtual void on_left_up(real x, real y) override
+		{
+			auto logic = to_logic(mouse_capture.first);
+			logic->on_left_up(x - logic->x, y - logic->y);
+			if (!(--mouse_capture.second))
+				mouse_capture.first.reset();
+		}
+		virtual void on_mid_down(real x, real y) override
+		{
+			auto on_which = hittest(x, y);
+			if (mouse_capture.second)
+				on_which = mouse_capture.first;
+			if (on_which)
+			{
+				auto logic = to_logic(on_which);
+				bool is_focus = logic->set_focus();
+				if (is_focus && focused && focused != on_which)
+				{
+					auto logic = to_logic(focused);
+					logic->kill_focus();
+					focused.reset();
+				}
+				if (is_focus)
+					focused = on_which;
+				logic->on_mid_down(x - logic->x, y - logic->y);
+				mouse_capture.first = on_which;
+				mouse_capture.second++;
+			}
+		}
+		virtual void on_mid_up(real x, real y) override
+		{
+			auto logic = to_logic(mouse_capture.first);
+			logic->on_mid_up(x - logic->x, y - logic->y);
+			if (!(--mouse_capture.second))
+				mouse_capture.first.reset();
+		}
+		virtual void on_right_down(real x, real y) override
+		{
+			auto on_which = hittest(x, y);
+			if (mouse_capture.second)
+				on_which = mouse_capture.first;
+			if (on_which)
+			{
+				auto logic = to_logic(on_which);
+				bool is_focus = logic->set_focus();
+				if (is_focus && focused && focused != on_which)
+				{
+					auto logic = to_logic(focused);
+					logic->kill_focus();
+					focused.reset();
+				}
+				if (is_focus)
+					focused = on_which;
+				logic->on_right_down(x - logic->x, y - logic->y);
+				mouse_capture.first = on_which;
+				mouse_capture.second++;
+			}
+		}
+		virtual void on_right_up(real x, real y) override
+		{
+			auto logic = to_logic(mouse_capture.first);
+			logic->on_right_up(x - logic->x, y - logic->y);
+			if (!(--mouse_capture.second))
+				mouse_capture.first.reset();
+		}
+		virtual void on_mouse_move(real x, real y) override
+		{
+			auto on_which = hittest(x, y);
+			if (mouse_capture.second)
+				if (mouse_capture.first != on_which)
+					on_which.reset();
+			if (on_which)
+			{
+				if (on_which != mouse_on)
+				{
+					if (mouse_on)
+					{
+						auto logic = to_logic(mouse_on);
+						logic->on_mouse_leave();
+					}
+					mouse_on = on_which;
+					auto logic = to_logic(mouse_on);
+					logic->on_mouse_hover();
+				}
+				auto logic = to_logic(on_which);
+				logic->on_mouse_move(x - logic->x, y - logic->y);
+			}
+			else if (mouse_on)
+			{
+				auto logic = to_logic(mouse_on);
+				logic->on_mouse_leave();
+				mouse_on.reset();
+			}
+		}
+		virtual void on_mouse_leave() override
+		{
+			if (mouse_on)
+			{
+				auto logic = to_logic(mouse_on);
+				logic->on_mouse_leave();
+				mouse_on.reset();
+			}
+		}
+		virtual void on_update(std::chrono::high_resolution_clock::duration elapsed) override
+		{
+			for (const auto& widget : widgets)
+				to_logic(widget)->on_update(elapsed);
+		}
+		virtual void on_activate() override
+		{
+			for (const auto& widget : widgets)
+				to_logic(widget)->activate();
+		}
+		virtual void on_deactivate() override
+		{
+			for (const auto& widget : widgets)
+				to_logic(widget)->deactivate();
+		}
+	};
+#if _MSVC_LANG
+	template <>
+	class dep_widget<logic_group> : virtual public logic_group, virtual public dep_widget_base
+	{
+	public:
+		virtual void on_paint() const override
+		{
+			pRenderTarget->PushAxisAlignedClip(D2D1::RectF(0, 0, cx, cy), D2D1_ANTIALIAS_MODE_ALIASED);
+			D2D1_MATRIX_3X2_F transform;
+			pRenderTarget->GetTransform(&transform);
+			for (const auto& widget : widgets)
+			{
+				auto logic = to_logic(widget);
+				auto move = D2D1::Matrix3x2F::Translation(logic->x, logic->y);
+				pRenderTarget->SetTransform(transform * move);
+				widget->on_paint();
+			}
+			pRenderTarget->SetTransform(transform);
+			pRenderTarget->PopAxisAlignedClip();
+		}
+	};
+	using group = dep_widget<logic_group>;
+	static_assert(has_implimented_dep_widget<logic_group>);
+#endif
 
 #if _MSVC_LANG
 	class scene
@@ -245,13 +452,14 @@ namespace direct_ui
 		std::weak_ptr<scene> self;
 
 	public:
-		std::vector<std::shared_ptr<dep_widget_base>> widgets;
+		std::shared_ptr<group> contents;
 
 	public:
 		scene(ID2D1Factory* pFactory, ID2D1RenderTarget* pRenderTarget, HWND hwnd) :
 			pFactory(pFactory),
 			pRenderTarget(pRenderTarget),
-			hwnd(hwnd)
+			hwnd(hwnd),
+			contents(build_dep_widget<group>())
 		{
 
 		}
@@ -301,205 +509,63 @@ namespace direct_ui
 			_cy = height / scale;
 			reinterpret_cast<ID2D1HwndRenderTarget*>(pRenderTarget)->Resize(D2D1::SizeU(width, height));
 			pRenderTarget->SetDpi(dpi, dpi);
-			on_resize(cx, cy);
+			to_logic(contents)->resize(cx, cy);
 		}
-		std::function<void(real, real)> on_resize{ [](real, real) {} };
-	public:
-		auto on_hittest(real x, real y) const
-		{
-			std::shared_ptr<dep_widget_base> ret;
-			for (const auto& widget : reversed(widgets))
-			{
-				auto logic = to_logic(widget);
-				if (logic->x <= x && x < logic->x + logic->cx &&
-					logic->y <= y && y < logic->y + logic->cy &&
-					logic->on_hittest(x - logic->x, y - logic->y))
-				{
-					ret = widget;
-					break;
-				}
-			}
-			return ret;
-		}
-
-	private:
-		std::shared_ptr<dep_widget_base> mouse_on;
-		std::pair<std::shared_ptr<dep_widget_base>, int> mouse_capture{};
-		std::shared_ptr<dep_widget_base> focused;
 
 	public:
 		void on_paint()
 		{
 			pRenderTarget->BeginDraw();
-			D2D1_MATRIX_3X2_F transform;
-			pRenderTarget->GetTransform(&transform);
-			for (const auto& widget : widgets)
-			{
-				auto logic = to_logic(widget);
-				auto move = D2D1::Matrix3x2F::Translation(logic->x, logic->y);
-				pRenderTarget->SetTransform(transform * move);
-				widget->on_paint();
-			}
-			pRenderTarget->SetTransform(transform);
+			contents->on_paint();
 			pRenderTarget->EndDraw();
 		}
 		void on_mouse_move(int x, int y)
 		{
-			x /= scale;
-			y /= scale;
-			auto on_which = on_hittest(x, y);
-			if (mouse_capture.second)
-				if (mouse_capture.first != on_which)
-					on_which.reset();
-			if (on_which)
-			{
-				if (on_which != mouse_on)
-				{
-					if (mouse_on)
-					{
-						auto logic = to_logic(mouse_on);
-						logic->on_mouse_leave();
-					}
-					mouse_on = on_which;
-					auto logic = to_logic(mouse_on);
-					logic->on_mouse_hover();
-				}
-				auto logic = to_logic(on_which);
-				logic->on_mouse_move(x - logic->x, y - logic->y);
-			}
-			else if (mouse_on)
-			{
-				auto logic = to_logic(mouse_on);
-				logic->on_mouse_leave();
-				mouse_on.reset();
-			}
+			contents->on_mouse_move(x / scale, y / scale);
 		}
 		void on_mouse_leave()
 		{
-			if (mouse_on)
-			{
-				auto logic = to_logic(mouse_on);
-				logic->on_mouse_leave();
-				mouse_on.reset();
-			}
+			contents->on_mouse_leave();
 		}
 		void on_left_down(int x, int y)
 		{
-			x /= scale;
-			y /= scale;
-			auto on_which = on_hittest(x, y);
-			if (mouse_capture.second)
-				on_which = mouse_capture.first;
-			if (on_which)
-			{
-				auto logic = to_logic(on_which);
-				bool is_focus = logic->set_focus();
-				if (is_focus && focused && focused != on_which)
-				{
-					auto logic = to_logic(focused);
-					logic->kill_focus();
-					focused.reset();
-				}
-				if (is_focus)
-					focused = on_which;
-				logic->on_left_down(x - logic->x, y - logic->y);
-				mouse_capture.first = on_which;
-				mouse_capture.second++;
-			}
+			contents->on_left_down(x / scale, y / scale);
 		}
 		void on_left_up(int x, int y)
 		{
-			x /= scale;
-			y /= scale;
-			auto logic = to_logic(mouse_capture.first);
-			logic->on_left_up(x - logic->x, y - logic->y);
-			if (!(--mouse_capture.second))
-				mouse_capture.first.reset();
+			contents->on_left_up(x / scale, y / scale);
 		}
 		void on_mid_down(int x, int y)
 		{
-			x /= scale;
-			y /= scale;
-			auto on_which = on_hittest(x, y);
-			if (mouse_capture.second)
-				on_which = mouse_capture.first;
-			if (on_which)
-			{
-				auto logic = to_logic(on_which);
-				bool is_focus = logic->set_focus();
-				if (is_focus && focused && focused != on_which)
-				{
-					auto logic = to_logic(focused);
-					logic->kill_focus();
-					focused.reset();
-				}
-				if (is_focus)
-					focused = on_which;
-				logic->on_mid_down(x - logic->x, y - logic->y);
-				mouse_capture.first = on_which;
-				mouse_capture.second++;
-			}
+			contents->on_mid_down(x / scale, y / scale);
 		}
 		void on_mid_up(int x, int y)
 		{
-			x /= scale;
-			y /= scale;
-			auto logic = to_logic(mouse_capture.first);
-			logic->on_mid_up(x - logic->x, y - logic->y);
-			if (!(--mouse_capture.second))
-				mouse_capture.first.reset();
+			contents->on_mid_up(x / scale, y / scale);
 		}
 		void on_right_down(int x, int y)
 		{
-			x /= scale;
-			y /= scale;
-			auto on_which = on_hittest(x, y);
-			if (mouse_capture.second)
-				on_which = mouse_capture.first;
-			if (on_which)
-			{
-				auto logic = to_logic(on_which);
-				bool is_focus = logic->set_focus();
-				if (is_focus && focused && focused != on_which)
-				{
-					auto logic = to_logic(focused);
-					logic->kill_focus();
-					focused.reset();
-				}
-				if (is_focus)
-					focused = on_which;
-				logic->on_right_down(x - logic->x, y - logic->y);
-				mouse_capture.first = on_which;
-				mouse_capture.second++;
-			}
+			contents->on_right_down(x / scale, y / scale);
 		}
 		void on_right_up(int x, int y)
 		{
-			x /= scale;
-			y /= scale;
-			auto logic = to_logic(mouse_capture.first);
-			logic->on_right_up(x - logic->x, y - logic->y);
-			if (!(--mouse_capture.second))
-				mouse_capture.first.reset();
-		}
-		void on_set_focus()
-		{
-			for (const auto& widget : widgets)
-				to_logic(widget)->activate();
-		}
-		void on_kill_focus()
-		{
-			for (const auto& widget : widgets)
-				to_logic(widget)->deactivate();
+			contents->on_right_up(x / scale, y / scale);
 		}
 		void on_update()
 		{
 			auto now = std::chrono::high_resolution_clock::now();
-			auto period = now - pre;
-			for (const auto& widget : widgets)
-				to_logic(widget)->on_update(period);
+			auto elapsed = now - pre;
+			contents->on_update(elapsed);
 			if (hwnd)
 				InvalidateRect(hwnd, nullptr, FALSE);
+		}
+		void on_set_focus()
+		{
+			contents->activate();
+		}
+		void on_kill_focus()
+		{
+			contents->deactivate();
 		}
 	public:
 		template <typename dep_widget_t>
@@ -552,24 +618,13 @@ namespace direct_ui
 			return ret;
 		}
 	};
-#endif
 	inline void direct_ui::logic_widget::require_update()
 	{
 		if (!ancestor.expired())
 			ancestor.lock()->update();
 	}
+#endif
 
-	class logic_rect : virtual public logic_widget
-	{
-	public:
-		unsigned int brush_color{};
-		unsigned int pen_color{};
-		real pen_size{};
-		logic_rect()
-		{
-			is_focusable = false;
-		}
-	};
 	class logic_button : virtual public logic_widget
 	{
 	protected:
@@ -645,7 +700,6 @@ namespace direct_ui
 				callback();
 		}
 	};
-
 #if _MSVC_LANG
 	template <>
 	class dep_widget<logic_button> : virtual public logic_button, virtual public dep_widget_base
@@ -700,6 +754,21 @@ namespace direct_ui
 		friend class scene;
 	};
 	using button = dep_widget<logic_button>;
+	static_assert(has_implimented_dep_widget<logic_button>);
+#endif
+
+	class logic_rect : virtual public logic_widget
+	{
+	public:
+		unsigned int brush_color{};
+		unsigned int pen_color{};
+		real pen_size{};
+		logic_rect()
+		{
+			is_focusable = false;
+		}
+	};
+#if _MSVC_LANG
 	template <>
 	class dep_widget<logic_rect> : virtual public logic_rect, virtual public dep_widget_base
 	{
@@ -723,11 +792,6 @@ namespace direct_ui
 		}
 	};
 	using rect = dep_widget<logic_rect>;
-#endif
-
-	template <typename logic_t>
-	concept has_implimented_dep_widget = std::is_base_of_v<logic_t, dep_widget<logic_t>> &&
-		std::is_base_of_v<dep_widget_base, dep_widget<logic_t>>;
 	static_assert(has_implimented_dep_widget<logic_rect>);
-	static_assert(has_implimented_dep_widget<logic_button>);
+#endif
 }

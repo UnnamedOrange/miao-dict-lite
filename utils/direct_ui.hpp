@@ -140,8 +140,8 @@ namespace direct_ui
 		static constexpr unsigned blue_mask = 0xff << blue_shift;
 		static constexpr unsigned alpha_mask = 0xff << alpha_shift;
 	public:
-		color() = default;
-		color(unsigned int rgb_or_argb, unsigned char a = 0) :
+		constexpr color() = default;
+		constexpr color(unsigned int rgb_or_argb, unsigned char a = 0) :
 			r{ static_cast<real>((rgb_or_argb & red_mask) >> red_shift) / 255.f },
 			g{ static_cast<real>((rgb_or_argb & green_mask) >> green_shift) / 255.f },
 			b{ static_cast<real>((rgb_or_argb & blue_mask) >> blue_shift) / 255.f }
@@ -151,13 +151,23 @@ namespace direct_ui
 			else
 				this->a = static_cast<real>((rgb_or_argb & alpha_mask) >> alpha_shift) / 255.f;
 		}
-		color(real r, real g, real b, real a = 1.f) :
+		constexpr color(real r, real g, real b, real a = 1.f) :
 			r(r), g(g), b(b), a(a) {}
-		color(unsigned r, unsigned g, unsigned b, unsigned a = 255) :
+		constexpr color(unsigned r, unsigned g, unsigned b, unsigned a = 255) :
 			r(static_cast<real>(r) / 255.f),
 			g(static_cast<real>(g) / 255.f),
 			b(static_cast<real>(b) / 255.f),
 			a(static_cast<real>(a) / 255.f) {}
+	public:
+		static constexpr color linear_interpolation(const color& c0, const color& c1, real ratio)
+		{
+			color ret;
+			ret.r = c0.r * (1 - ratio) + c1.r * ratio;
+			ret.g = c0.g * (1 - ratio) + c1.g * ratio;
+			ret.b = c0.b * (1 - ratio) + c1.b * ratio;
+			ret.a = c0.a * (1 - ratio) + c1.a * ratio;
+			return ret;
+		}
 
 #if _MSVC_LANG
 	public:

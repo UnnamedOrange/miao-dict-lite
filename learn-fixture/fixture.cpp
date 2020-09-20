@@ -6,6 +6,8 @@
 #include "utils/direct_ui.hpp"
 #include "utils/direct_ui_window.hpp"
 
+#include "exit_button.hpp"
+
 using namespace direct_ui;
 
 class fixture_window final : public dui_window
@@ -55,6 +57,13 @@ class fixture_window final : public dui_window
 		bg_rect->resize(s->cx, s->cy);
 		bg_rect->brush_color = 0xffffffff;
 
+		exit_button_1 = s->build_dep_widget<exit_button>();
+		s->contents->widgets.push_back(exit_button_1);
+		exit_button_1->callback = [this]()
+		{
+			PostMessageW(this->hwnd, WM_QUIT, NULL, NULL);
+		};
+		exit_button_1->move(8, 8);
 		return TRUE;
 	}
 	void OnDestroy(HWND hwnd)
@@ -63,7 +72,7 @@ class fixture_window final : public dui_window
 	}
 
 private:
-	std::shared_ptr<button> b1;
+	std::shared_ptr<exit_button> exit_button_1;
 
 public:
 	fixture_window()

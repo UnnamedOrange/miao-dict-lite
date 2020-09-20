@@ -153,6 +153,9 @@
   <ItemGroup>
     <ClCompile Include="fixture.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="exit_button.hpp" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

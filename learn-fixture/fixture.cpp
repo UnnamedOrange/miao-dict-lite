@@ -43,7 +43,7 @@ class fixture_window final : public dui_window
 		SetForegroundWindow(hwnd);
 		SetWindowPos(hwnd, HWND_TOPMOST, NULL, NULL, NULL, NULL, SWP_NOMOVE | SWP_NOSIZE | SWP_NOREDRAW);
 		SetWindowLongW(hwnd, GWL_EXSTYLE, WS_EX_LAYERED | WS_EX_TOPMOST);
-		SetLayeredWindowAttributes(hwnd, NULL, 254, LWA_ALPHA);
+		SetLayeredWindowAttributes(hwnd, NULL, 235, LWA_ALPHA);
 
 		RECT wa = work_area();
 		right(wa.right - dpi(16));
@@ -55,7 +55,7 @@ class fixture_window final : public dui_window
 		s->contents->widgets.push_back(bg_rect);
 		bg_rect->move(0, 0);
 		bg_rect->resize(s->cx, s->cy);
-		bg_rect->brush_color = 0xffffffff;
+		bg_rect->brush_color = color(247u, 228u, 172u);
 
 		exit_button_1 = s->build_dep_widget<exit_button>();
 		s->contents->widgets.push_back(exit_button_1);

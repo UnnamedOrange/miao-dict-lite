@@ -352,14 +352,17 @@ namespace direct_ui
 				if (is_focus)
 					focused = on_which;
 				logic->on_left_down(x - logic->x, y - logic->y);
-				mouse_capture.first = on_which;
-				mouse_capture.second++;
 			}
+			mouse_capture.first = on_which;
+			mouse_capture.second++;
 		}
 		virtual void on_left_up(real x, real y) override
 		{
-			auto logic = to_logic(mouse_capture.first);
-			logic->on_left_up(x - logic->x, y - logic->y);
+			if (mouse_capture.first)
+			{
+				auto logic = to_logic(mouse_capture.first);
+				logic->on_left_up(x - logic->x, y - logic->y);
+			}
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
 		}
@@ -381,14 +384,17 @@ namespace direct_ui
 				if (is_focus)
 					focused = on_which;
 				logic->on_mid_down(x - logic->x, y - logic->y);
-				mouse_capture.first = on_which;
-				mouse_capture.second++;
 			}
+			mouse_capture.first = on_which;
+			mouse_capture.second++;
 		}
 		virtual void on_mid_up(real x, real y) override
 		{
-			auto logic = to_logic(mouse_capture.first);
-			logic->on_mid_up(x - logic->x, y - logic->y);
+			if (mouse_capture.first)
+			{
+				auto logic = to_logic(mouse_capture.first);
+				logic->on_mid_up(x - logic->x, y - logic->y);
+			}
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
 		}
@@ -410,14 +416,17 @@ namespace direct_ui
 				if (is_focus)
 					focused = on_which;
 				logic->on_right_down(x - logic->x, y - logic->y);
-				mouse_capture.first = on_which;
-				mouse_capture.second++;
 			}
+			mouse_capture.first = on_which;
+			mouse_capture.second++;
 		}
 		virtual void on_right_up(real x, real y) override
 		{
-			auto logic = to_logic(mouse_capture.first);
-			logic->on_right_up(x - logic->x, y - logic->y);
+			if (mouse_capture.first)
+			{
+				auto logic = to_logic(mouse_capture.first);
+				logic->on_right_up(x - logic->x, y - logic->y);
+			}
 			if (!(--mouse_capture.second))
 				mouse_capture.first.reset();
 		}

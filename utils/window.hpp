@@ -17,6 +17,7 @@
 #include <Windows.h>
 #undef min
 #undef max
+#include <windowsx.h>
 
 #include "utils/code_conv.hpp"
 

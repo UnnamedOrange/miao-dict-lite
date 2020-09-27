@@ -7,6 +7,7 @@
 #include "utils/direct_ui_window.hpp"
 
 #include "exit_button.hpp"
+#include "icon_button.hpp"
 
 using namespace direct_ui;
 
@@ -64,6 +65,12 @@ class fixture_window final : public dui_window
 			PostMessageW(this->hwnd, WM_QUIT, NULL, NULL);
 		};
 		exit_button_1->move(8, 8);
+
+		option_button_1 = s->build_dep_widget<icon_button>();
+		s->contents->widgets.push_back(option_button_1);
+		option_button_1->icon = 0xe700;
+		option_button_1->move(32, 8);
+
 		return TRUE;
 	}
 	void OnDestroy(HWND hwnd)
@@ -73,6 +80,7 @@ class fixture_window final : public dui_window
 
 private:
 	std::shared_ptr<exit_button> exit_button_1;
+	std::shared_ptr<icon_button> option_button_1;
 
 public:
 	fixture_window()

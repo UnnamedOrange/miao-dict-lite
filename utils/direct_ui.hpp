@@ -193,6 +193,11 @@ namespace direct_ui
 		const real& cx{ _cx };
 		const real& cy{ _cy };
 	public:
+		real left() const { return x; }
+		real top() const { return y; }
+		real right() const { return x + cx; }
+		real bottom() const { return y + cy; }
+	public:
 		void move(std::optional<real> x, std::optional<real> y)
 		{
 			if (x)

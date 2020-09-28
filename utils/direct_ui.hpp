@@ -182,6 +182,21 @@ namespace direct_ui
 	{
 	public:
 		virtual ~logic_widget() {}
+		logic_widget() = default;
+		logic_widget(const logic_widget& another) :
+			_x(another._x), _y(another._y), _cx(another._cx), _cy(another._cy),
+			_is_focused(another._is_focused), _is_activated(another._is_activated),
+			_is_visible(another._is_visible), _is_enabled(another._is_enabled),
+			_ancestor(another._ancestor) {}
+		logic_widget& operator=(const logic_widget& another)
+		{
+			if (this != &another)
+			{
+				this->~logic_widget();
+				new(this) logic_widget(another);
+			}
+			return *this;
+		}
 	private:
 		real _x{};
 		real _y{};

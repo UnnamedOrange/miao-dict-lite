@@ -1,18 +1,14 @@
 ﻿#pragma once
 
 #include "utils/direct_ui.hpp"
+#include "unpainted_button.hpp"
 
 namespace direct_ui
 {
-	class logic_exit_button : virtual public logic_widget
+	class logic_exit_button : virtual public logic_unpainted_button
 	{
 	private:
 		static constexpr real r = 8;
-	private:
-		bool is_mouse_hover{};
-		int is_mouse_down{};
-	public:
-		std::function<void()> callback{ [] {} };
 	public:
 		logic_exit_button()
 		{
@@ -44,34 +40,12 @@ namespace direct_ui
 			real dis = dx * dx + dy * dy;
 			return dis <= r * r;
 		}
-		virtual void on_mouse_hover() override
-		{
-			is_mouse_hover = true;
-			require_update();
-		}
-		virtual void on_mouse_leave() override
-		{
-			is_mouse_hover = false;
-			require_update();
-		}
-		virtual void on_left_down(real x, real y) override
-		{
-			is_mouse_down++;
-			require_update();
-		}
-		virtual void on_left_up(real x, real y) override
-		{
-			is_mouse_down--;
-			require_update();
-			if (is_mouse_hover)
-				callback();
-		}
 
 		friend class dep_widget<logic_exit_button>;
 	};
 #if _MSVC_LANG
 	template <>
-	class dep_widget<logic_exit_button> : virtual public logic_exit_button, virtual public dep_widget_base
+	class dep_widget<logic_exit_button> : virtual public logic_exit_button, virtual public unpainted_button
 	{
 	public:
 		virtual void on_paint() const override

@@ -4,11 +4,8 @@
 
 namespace direct_ui
 {
-	class logic_icon_button : virtual public logic_widget
+	class logic_icon_button : virtual public logic_unpainted_button
 	{
-	private:
-		bool is_mouse_hover{};
-		int is_mouse_down{};
 	public:
 		std::function<void()> callback{ [] {} };
 	public:
@@ -35,34 +32,12 @@ namespace direct_ui
 					require_update();
 			}
 		}
-		virtual void on_mouse_hover() override
-		{
-			is_mouse_hover = true;
-			require_update();
-		}
-		virtual void on_mouse_leave() override
-		{
-			is_mouse_hover = false;
-			require_update();
-		}
-		virtual void on_left_down(real x, real y) override
-		{
-			is_mouse_down++;
-			require_update();
-		}
-		virtual void on_left_up(real x, real y) override
-		{
-			is_mouse_down--;
-			require_update();
-			if (is_mouse_hover)
-				callback();
-		}
 
 		friend class dep_widget<logic_icon_button>;
 	};
 #if _MSVC_LANG
 	template <>
-	class dep_widget<logic_icon_button> : virtual public logic_icon_button, virtual public dep_widget_base
+	class dep_widget<logic_icon_button> : virtual public logic_icon_button, virtual public unpainted_button
 	{
 	public:
 		virtual void on_paint() const override

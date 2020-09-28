@@ -216,11 +216,15 @@ namespace direct_ui
 	private:
 		bool _is_focused{};
 		bool _is_activated{};
+		bool _is_visible{ true };
+		bool _is_enabled{ true };
 	public:
 		bool is_focusable{ true };
 	public:
 		const bool& is_foucsed{ _is_focused };
 		const bool& is_activated{ _is_activated };
+		const bool& is_visible{ _is_visible };
+		const bool& is_enabled{ _is_enabled };
 	public:
 		bool set_focus()
 		{
@@ -244,6 +248,18 @@ namespace direct_ui
 		{
 			_is_activated = false;
 			on_deactivate();
+		}
+		void set_visible(bool visible)
+		{
+			_is_visible = visible;
+		}
+		void enable()
+		{
+			_is_enabled = true;
+		}
+		void disable()
+		{
+			_is_enabled = false;
 		}
 
 	public:

@@ -350,6 +350,7 @@ namespace direct_ui
 				auto logic = to_logic(widget);
 				if (logic->x <= x && x < logic->x + logic->cx &&
 					logic->y <= y && y < logic->y + logic->cy &&
+					logic->is_visible &&
 					logic->on_hittest(x - logic->x, y - logic->y))
 				{
 					ret = widget;

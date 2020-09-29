@@ -123,10 +123,6 @@ public:
 namespace direct_ui
 {
 	using real = float;
-	template <typename T>
-	concept float_type = std::is_floating_point_v<T>;
-	static_assert(float_type<real>);
-
 	class color
 	{
 	public:
@@ -180,55 +176,6 @@ namespace direct_ui
 			return D2D1::ColorF(r, g, b, a);
 		}
 #endif
-	};
-
-	template <float_type T>
-	class animation_float
-	{
-		T _target{};
-		T _current{};
-		T _start{};
-		std::chrono::high_resolution_clock::duration _elapsed_after_start{};
-		enum class animation_type
-		{
-			null,
-			linear
-		} _type{};
-		std::chrono::high_resolution_clock::duration _duration;
-	public:
-		constexpr animation_float() = default;
-		constexpr animation_float(T init) : _target(init), _current(init), _start(init) {}
-		constexpr operator T() const { return _current; }
-	public:
-		bool update(std::chrono::high_resolution_clock::duration elapsed)
-		{
-			_elapsed_after_start += elapsed;
-			switch (_type)
-			{
-			case animation_type::null:
-				return false;
-			case animation_type::linear:
-			{
-				if (_elapsed_after_start >= _duration)
-				{
-					_current = _target;
-					return false;
-				}
-				else
-					_current = _start + (_target - _start) * _elapsed_after_start.count() / _duration.count();
-				break;
-			}
-			}
-			return true;
-		}
-		void linear(T target, decltype(_duration) duration)
-		{
-			_type = animation_type::linear;
-			_target = target;
-			_start = _current;
-			_elapsed_after_start = _elapsed_after_start.zero();
-			_duration = duration;
-		}
 	};
 
 	class logic_widget

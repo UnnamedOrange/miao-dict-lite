@@ -156,6 +156,7 @@
   <ItemGroup>
     <ClInclude Include="exit_button.hpp" />
     <ClInclude Include="icon_button.hpp" />
+    <ClInclude Include="vessel.hpp" />
     <ClInclude Include="unpainted_button.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -8,6 +8,7 @@
 
 #include "exit_button.hpp"
 #include "icon_button.hpp"
+#include "vessel.hpp"
 
 using namespace direct_ui;
 
@@ -52,14 +53,18 @@ class fixture_window final : public dui_window
 		bottom(wa.bottom - dpi(16));
 		top(wa.bottom - dpi(200));
 
+		vessel_1 = s->build_dep_widget<vessel>();
+		s->contents->widgets.push_back(vessel_1);
+		vessel_1->resize(s->cx, s->cy);
+
 		auto bg_rect = s->build_dep_widget<rect>();
-		s->contents->widgets.push_back(bg_rect);
+		vessel_1->widgets.push_back(bg_rect);
 		bg_rect->move(0, 0);
 		bg_rect->resize(s->cx, s->cy);
 		bg_rect->brush_color = color(247u, 228u, 172u);
 
 		exit_button_1 = s->build_dep_widget<exit_button>();
-		s->contents->widgets.push_back(exit_button_1);
+		vessel_1->widgets.push_back(exit_button_1);
 		exit_button_1->callback = [this]()
 		{
 			PostMessageW(this->hwnd, WM_QUIT, NULL, NULL);
@@ -67,9 +72,11 @@ class fixture_window final : public dui_window
 		exit_button_1->move(8, 8);
 
 		option_button_1 = s->build_dep_widget<icon_button>();
-		s->contents->widgets.push_back(option_button_1);
+		vessel_1->widgets.push_back(option_button_1);
 		option_button_1->icon = 0xe700;
 		option_button_1->move(32, 8);
+		option_button_1->set_visible(false);
+		vessel_1->hover_to_show.push_back(option_button_1);
 
 		return TRUE;
 	}
@@ -79,6 +86,7 @@ class fixture_window final : public dui_window
 	}
 
 private:
+	std::shared_ptr<vessel> vessel_1;
 	std::shared_ptr<exit_button> exit_button_1;
 	std::shared_ptr<icon_button> option_button_1;
 

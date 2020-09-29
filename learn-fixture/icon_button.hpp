@@ -15,6 +15,7 @@ namespace direct_ui
 		}
 	private:
 		real hover_ratio{};
+		real visible_ratio{ 0.f };
 	public:
 		wchar_t icon{};
 	public:
@@ -29,6 +30,15 @@ namespace direct_ui
 				hover_ratio += step;
 				hover_ratio = std::max(0.f, std::min(1.f, hover_ratio));
 				if (std::abs(hover_ratio - hover_target) > 1e-6)
+					require_update();
+			}
+			{
+				real visible_target = is_visible;
+				constexpr real speed = 5;
+				real step = (visible_target ? 1 : -1) * speed * dt;
+				visible_ratio += step;
+				visible_ratio = std::max(0.f, std::min(1.f, visible_ratio));
+				if (std::abs(visible_ratio - visible_target) > 1e-6)
 					require_update();
 			}
 		}
@@ -56,7 +66,7 @@ namespace direct_ui
 				text_format->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
 
 				ID2D1SolidColorBrush* brush_text{};
-				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x000000), &brush_text);
+				pRenderTarget->CreateSolidColorBrush(D2D1::ColorF(0x000000, visible_ratio), &brush_text);
 
 				s->pRenderTarget->DrawTextW(&icon, 1, text_format,
 					D2D1::RectF(0, 0, cx, cy), brush_text);

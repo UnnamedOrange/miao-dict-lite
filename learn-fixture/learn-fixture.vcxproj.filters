@@ -29,5 +29,8 @@
     <ClInclude Include="unpainted_button.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="vessel.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

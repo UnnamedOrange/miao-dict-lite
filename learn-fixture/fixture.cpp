@@ -78,6 +78,13 @@ class fixture_window final : public dui_window
 		option_button_1->set_visible(false);
 		vessel_1->hover_to_show.push_back(option_button_1);
 
+		option_button_2 = s->build_dep_widget<icon_button>();
+		vessel_1->widgets.push_back(option_button_2);
+		option_button_2->icon = 0xe783;
+		option_button_2->move(vessel_1->cx - option_button_2->cx - 8, 8);
+		option_button_2->set_visible(false);
+		vessel_1->hover_to_show.push_back(option_button_2);
+
 		return TRUE;
 	}
 	void OnDestroy(HWND hwnd)
@@ -89,6 +96,7 @@ private:
 	std::shared_ptr<vessel> vessel_1;
 	std::shared_ptr<exit_button> exit_button_1;
 	std::shared_ptr<icon_button> option_button_1;
+	std::shared_ptr<icon_button> option_button_2;
 
 public:
 	fixture_window()

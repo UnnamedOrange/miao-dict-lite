@@ -17,7 +17,9 @@ namespace direct_ui
 	private:
 		static constexpr color color_hover{ 232u, 17u, 35u };
 		static constexpr color color_leave{ 255u, 255u, 255u };
+		static constexpr color color_down{ 255u, 255u, 255u };
 		real hover_ratio{};
+		real down_ratio{};
 	public:
 		virtual void on_update(std::chrono::steady_clock::duration elapsed) override
 		{
@@ -30,6 +32,15 @@ namespace direct_ui
 				hover_ratio += step;
 				hover_ratio = std::max(0.f, std::min(1.f, hover_ratio));
 				if (std::abs(hover_ratio - hover_target) > 1e-6)
+					require_update();
+			}
+			{
+				real down_target = is_mouse_down;
+				constexpr real speed = 5;
+				real step = (down_target ? 1 : -1) * speed * dt;
+				down_ratio += step;
+				down_ratio = std::max(0.f, std::min(1.f, down_ratio));
+				if (std::abs(down_ratio - down_target) > 1e-6)
 					require_update();
 			}
 		}
@@ -51,15 +62,39 @@ namespace direct_ui
 		virtual void on_paint() const override
 		{
 			std::shared_ptr<scene> s = ancestor.lock();
+
+			auto bg_color = color::linear_interpolation(color_leave, color_hover, hover_ratio);
 			{
 				ID2D1SolidColorBrush* brush;
-				pRenderTarget->CreateSolidColorBrush(
-					color::linear_interpolation(color_leave, color_hover, hover_ratio),
-					&brush);
+				pRenderTarget->CreateSolidColorBrush(bg_color, &brush);
 				pRenderTarget->FillEllipse(
 					{ {cx / 2, cy / 2}, r, r },
 					brush);
 				brush->Release();
+			}
+			{
+				IDWriteTextFormat* text_format{};
+				s->pDWriteFactory->CreateTextFormat(L"Segoe MDL2 Assets", nullptr,
+					DWRITE_FONT_WEIGHT_NORMAL,
+					DWRITE_FONT_STYLE_NORMAL,
+					DWRITE_FONT_STRETCH_NORMAL,
+					cx / 2,
+					L"",
+					&text_format);
+				text_format->SetTextAlignment(DWRITE_TEXT_ALIGNMENT::DWRITE_TEXT_ALIGNMENT_CENTER);
+				text_format->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+				ID2D1SolidColorBrush* brush_text{};
+				pRenderTarget->CreateSolidColorBrush(
+					color::linear_interpolation(bg_color, color_down, down_ratio),
+					&brush_text);
+
+				wchar_t icon = 0xef2c;
+				s->pRenderTarget->DrawTextW(&icon, 1, text_format,
+					D2D1::RectF(0, 0, cx, cy), brush_text);
+
+				text_format->Release();
+				brush_text->Release();
 			}
 		}
 	};

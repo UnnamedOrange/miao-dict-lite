@@ -47,18 +47,18 @@ namespace direct_ui
 			}
 			{
 				real para_x_target = is_mouse_hover * (cx / 2 - mouse_x) * para_rate;
-				constexpr real speed = 100;
+				constexpr real speed = 75;
 				real step = (para_x_target > para_x ? 1 : -1) * speed * dt;
 				para_x += step;
-				if (std::abs(para_x - para_x_target) > 1e-6)
+				if (std::abs(para_x - para_x_target) > speed * dt)
 					require_update();
 			}
 			{
 				real para_y_target = is_mouse_hover * (cy / 2 - mouse_y) * para_rate;
-				constexpr real speed = 100;
+				constexpr real speed = 75;
 				real step = (para_y_target > para_y ? 1 : -1) * speed * dt;
 				para_y += step;
-				if (std::abs(para_y - para_y_target) > 1e-6)
+				if (std::abs(para_y - para_y_target) > speed * dt)
 					require_update();
 			}
 		}

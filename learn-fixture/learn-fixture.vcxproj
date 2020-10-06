@@ -158,6 +158,7 @@
     <ClInclude Include="icon_button.hpp" />
     <ClInclude Include="vessel.hpp" />
     <ClInclude Include="unpainted_button.hpp" />
+    <ClInclude Include="word_pad.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

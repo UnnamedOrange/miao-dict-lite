@@ -9,6 +9,7 @@
 #include "exit_button.hpp"
 #include "icon_button.hpp"
 #include "vessel.hpp"
+#include "word_pad.hpp"
 
 using namespace direct_ui;
 
@@ -63,6 +64,11 @@ class fixture_window final : public dui_window
 		bg_rect->resize(s->cx, s->cy);
 		bg_rect->brush_color = color(247u, 228u, 172u);
 
+		word_pad_1 = s->build_dep_widget<word_pad>();
+		vessel_1->widgets.push_back(word_pad_1);
+		word_pad_1->move(0, 0);
+		word_pad_1->resize(s->cx, s->cy);
+
 		exit_button_1 = s->build_dep_widget<exit_button>();
 		vessel_1->widgets.push_back(exit_button_1);
 		exit_button_1->callback = [this]()
@@ -97,6 +103,7 @@ private:
 	std::shared_ptr<exit_button> exit_button_1;
 	std::shared_ptr<icon_button> option_button_1;
 	std::shared_ptr<icon_button> option_button_2;
+	std::shared_ptr<word_pad> word_pad_1;
 
 public:
 	fixture_window()

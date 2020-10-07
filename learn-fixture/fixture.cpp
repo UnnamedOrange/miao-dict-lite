@@ -64,10 +64,11 @@ class fixture_window final : public dui_window
 		bg_rect->resize(s->cx, s->cy);
 		bg_rect->brush_color = color(247u, 228u, 172u);
 
-		word_pad_1 = s->build_dep_widget<word_pad>();
-		vessel_1->widgets.push_back(word_pad_1);
-		word_pad_1->move(0, 0);
-		word_pad_1->resize(s->cx, s->cy);
+		group_1 = s->build_dep_widget<group>();
+		vessel_1->widgets.push_back(group_1);
+		vessel_1->inner_group = group_1;
+		group_1->move(0, 0);
+		group_1->resize(s->cx, s->cy);
 
 		exit_button_1 = s->build_dep_widget<exit_button>();
 		vessel_1->widgets.push_back(exit_button_1);
@@ -91,6 +92,11 @@ class fixture_window final : public dui_window
 		option_button_2->set_visible(false);
 		vessel_1->hover_to_show.push_back(option_button_2);
 
+		word_pad_1 = s->build_dep_widget<word_pad>();
+		group_1->widgets.push_back(word_pad_1);
+		word_pad_1->move(0, 0);
+		word_pad_1->resize(s->cx, s->cy);
+
 		return TRUE;
 	}
 	void OnDestroy(HWND hwnd)
@@ -103,6 +109,8 @@ private:
 	std::shared_ptr<exit_button> exit_button_1;
 	std::shared_ptr<icon_button> option_button_1;
 	std::shared_ptr<icon_button> option_button_2;
+
+	std::shared_ptr<group> group_1;
 	std::shared_ptr<word_pad> word_pad_1;
 
 public:
